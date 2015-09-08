@@ -1,16 +1,16 @@
 /**
  * 路由控制
+ * handle:路由映射处理
+ * res:response
+ * data:请求数据
  */
-function route(handler,url){
-	var result = {};
+function route(handler,res,data){
+	var url = data.url;
 	if (typeof handler[url] === 'function') {
-		result.flag = true;
-		result.msg = handler[url]();
+		handler[url](res,data);
 	} else {
-		result.flag = false;
-		result.msg = 'No request handler found for '+url;
+		handler['/error'](res,data);
 	}
-	return result;
 }
 
 exports.route = route;
