@@ -4,12 +4,15 @@
  */
 var fs = require('fs');
 
+/**
+ * 使用nodejs提供的pipe管道方法实现文件复制
+ */
 function copy(src,dst){
 	fs.createReadStream(src).pipe(fs.createWriteStream(dst));
 }
 
 /**
- * 使用流事件的方式实现复制方法
+ * 使用流事件的方式实现文件复制
  */
 function copyControllerByEvent(src,dst){
 	var rs = fs.createReadStream(src);
