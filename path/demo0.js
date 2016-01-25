@@ -1,5 +1,5 @@
 /**
- * 测试path模块中的一些方法
+ * 测试path模块
  */
 var path = require('path');
 
