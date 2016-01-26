@@ -1,7 +1,7 @@
 /**
  * 逐行文件读取
  * 处理内容是用空格、tab、换行符号处理的简单表格式文本文件，并导出js文件形式的json数据
- * node demo3.js china_code.txt demo3-data.js
+ * node demo3.js china-code.txt demo3-data.js
  */
 var fs = require('fs');
 var readline = require('readline');
