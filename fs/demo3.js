@@ -58,12 +58,13 @@ function treeRelationship(total,totalJson){
             var j = 0;
             var limit = 0;
             while(j<total.length){
-                if(total[j].code!==iParentCode){
+                var itemJ = total[j];
+                if(itemJ.code!==iParentCode){
                     j++
                 }else{
                     limit++;
-                    if(total[j].code!==iParentCode){
-                        iParentCode = total[j].code;
+                    if(itemJ.parentCode!=null){
+                        iParentCode = itemJ.parentCode;
                         j = 0;
                     }else{
                         break;
