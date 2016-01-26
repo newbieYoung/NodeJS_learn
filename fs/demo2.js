@@ -1,8 +1,9 @@
 /**
  * 通过连接输入流和输出流的方式复制文件
- * node demo2.js demo0.txt demo2.txt
+ * babel-node demo2.js demo0.txt demo2.txt
  */
-var fs = require('fs');
+'use strict';
+let fs = require('fs');
 
 /**
  * 使用nodejs提供的pipe管道方法实现文件复制
@@ -15,8 +16,8 @@ function copy(src,dst){
  * 使用流事件的方式实现文件复制
  */
 function copyControllerByEvent(src,dst){
-	var rs = fs.createReadStream(src);
-	var ws = fs.createWriteStream(dst);
+	let rs = fs.createReadStream(src);
+	let ws = fs.createWriteStream(dst);
 	//读入数据
 	rs.on('data',function(chunk){
 		//写入数据
@@ -45,6 +46,6 @@ function main(argv){
 }
 
 console.log(process.argv);
-var argv = process.argv.slice(2);
+let argv = process.argv.slice(2);
 console.log(argv);
 main(argv);

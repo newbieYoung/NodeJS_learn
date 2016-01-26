@@ -1,9 +1,10 @@
 /**
  * 测试url模块中的一些方法
  */
-var url = require('url');
+'use strict';
+let url = require('url');
 
-var href = 'http://user:pass@host.com:8080/p/a/t/h?query=string#hash';
+let href = 'http://user:pass@host.com:8080/p/a/t/h?query=string#hash';
 
 console.log(href);
 

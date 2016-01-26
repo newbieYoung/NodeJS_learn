@@ -21,6 +21,6 @@
   },
   "homepage": "https://github.com/newbieYoung/NodeJS_learn#readme",
   "devDependencies": {
-
+    "iconv-lite": "^0.4.13"
   }
 }

@@ -8,6 +8,6 @@ let child_process = require('child_process');
 let endIndex = __dirname.lastIndexOf('/');
 let root = __dirname.substr(0,endIndex);
 
-child_process.exec('mkfir '+root+'/temp',function(){
+child_process.exec('mkdir '+root+'/temp',function(){
 	console.log('mkdir temp success');
 });

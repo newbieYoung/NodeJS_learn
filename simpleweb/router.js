@@ -4,8 +4,9 @@
  * res:response
  * data:请求数据
  */
+'use strict';
 function route(handler,res,data){
-	var url = data.url;
+	let url = data.url;
 	if (typeof handler[url] === 'function') {
 		handler[url](res,data);
 	} else {

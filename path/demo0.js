@@ -1,7 +1,8 @@
 /**
  * 测试path模块
  */
-var path = require('path');
+'use strict';
+let path = require('path');
 
 console.log(path.normalize('/first/second/../'));
 

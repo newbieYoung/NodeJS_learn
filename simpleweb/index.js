@@ -1,11 +1,12 @@
 /**
  * 简单服务器入口
  */
-var server = require('./server');
-var router = require('./router');
-var requestHandler = require('./requestHandler');
+'use strict';
+let server = require('./server');
+let router = require('./router');
+let requestHandler = require('./requestHandler');
 
-var handler = {};
+let handler = {};
 handler['/'] = requestHandler.root;
 handler['/start'] = requestHandler.start;
 handler['/error'] = requestHandler.error;

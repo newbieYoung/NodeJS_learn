@@ -1,12 +1,13 @@
 /**
  * 服务
  */
-var http = require('http');
+'use strict';
+let http = require('http');
 
 function start(route,handler){
 	http.createServer(function(req,res){
 		/* 组织数据 */
-		var data = {};
+		let data = {};
 		data.url = req.url;
 		data.postData = '';
 
