@@ -6,19 +6,33 @@ let http = require('http');
 
 http.createServer(function(request, response) {
 
+	let now = new Date();
+	let html = `<!DOCTYPE html>
+				<html lang="en">
+				<head>
+					<meta charset="UTF-8">
+					<title>hello</title>
+				</head>
+				<body>
+					<p>hello http cache ${now}</p>
+					<a href="//localhost:8888">click this link to test max-age</a>
+				</body>
+				</html>`;
 	let lastModifedTime = new Date('2016-02-17');
 	let etag = Math.random();//实体标识
 
-	response.setHeader('Cache-Control', 'public');//允许缓存
+	/**
+	 * Expires、Cache-Control
+	 * 控制浏览器是否直接从浏览器缓存中获取数据，Cache-Control优先级高；
+	 * Last-Modified、If-Modified-Since和ETag、If-None-Match
+	 * 浏览器发送请求到服务器后判断文件是否已经修改过，如果没有修改过就返回304给浏览器，
+	 * 通知浏览器直接从自己本地的获取对应的缓存信息，如果修改过那就整个数据重新发给浏览器。
+	 */
+
+	//max-age不生效，暂时没找到原因
+	response.setHeader('Cache-Control', 'public max-age=60000');
 	response.setHeader('Last-Modified',lastModifedTime);//设置最后修改时间
 	response.setHeader('Etag',etag);//设置实体标识
-	/**
-	 * max-age
-	 * 当客户端发送的请求中Cache-Control属性中指定了max-age；
-	 * 如果缓存资源的有效时间比该max-age小，则缓存服务器直接返回缓存资源；
-	 * 如果缓存资源的有效时间比该max-age大，则缓存服务器需要将该请求转发给源服务器；
-	 * 当源服务器返回的响应中Cache-Control属性中指定了max-age，缓存服务器将不对资源的有效性再做确认。
-	 */
 
 	//console.log(request);
 	let ifModifiedSince = request['headers']['if-modified-since'];
@@ -27,10 +41,10 @@ http.createServer(function(request, response) {
 	
 	if(ifNoneMatch){
 		if(ifNoneMatch===etag){
-			response.writeHead(304, {'Content-Type': 'text/plain'});
+			response.writeHead(304, {'Content-Type': 'text/html'});
 		}else{
-			response.writeHead(200, {'Content-Type': 'text/plain'});
-			response.write('Hello World'+new Date());
+			response.writeHead(200, {'Content-Type': 'text/html'});
+			response.write(html);
 		}
 	}else if(ifModifiedSince){
 		/**
@@ -43,14 +57,14 @@ http.createServer(function(request, response) {
 	     * 客户端接到之后，会丢弃旧文件，把新文件缓存起来，并显示到浏览器中。
 		 */
 		if(lastModifedTime.getTime()===new Date(ifModifiedSince).getTime()){
-			response.writeHead(304, {'Content-Type': 'text/plain'});
+			response.writeHead(304, {'Content-Type': 'text/html'});
 		}else{
-			response.writeHead(200, {'Content-Type': 'text/plain'});
-			response.write('Hello World'+new Date());
+			response.writeHead(200, {'Content-Type': 'text/html'});
+			response.write(html);
 		}
 	}else{
-		response.writeHead(200, {'Content-Type': 'text/plain'});
-		response.write('Hello World'+new Date());
+		response.writeHead(200, {'Content-Type': 'text/html'});
+		response.write(html);
 	}
 	
 	response.end();
