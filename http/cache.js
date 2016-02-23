@@ -24,12 +24,12 @@ http.createServer(function(request, response) {
 	/**
 	 * Expires、Cache-Control
 	 * 控制浏览器是否直接从浏览器缓存中获取数据，Cache-Control优先级高；
+	 * 而且由于浏览器机制刷新页面时会忽略Expires、Cache-Control，要测试Expires、Cache-Control只能点击url相同的链接（该链接是否新开tab页均可）
 	 * Last-Modified、If-Modified-Since和ETag、If-None-Match
 	 * 浏览器发送请求到服务器后判断文件是否已经修改过，如果没有修改过就返回304给浏览器，
 	 * 通知浏览器直接从自己本地的获取对应的缓存信息，如果修改过那就整个数据重新发给浏览器。
 	 */
 
-	//max-age不生效，暂时没找到原因
 	response.setHeader('Cache-Control', 'public max-age=60000');
 	response.setHeader('Last-Modified',lastModifedTime);//设置最后修改时间
 	response.setHeader('Etag',etag);//设置实体标识
