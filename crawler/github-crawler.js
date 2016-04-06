@@ -103,7 +103,7 @@ let req = https.request(url,function(res){
 
                                 githubData.articles.push(article);
                                 
-                                //所有文章已经爬去完毕，开始数据处理
+                                //所有文章已经爬取完毕，开始数据处理
                                 if(i===githubData.urls.length-1){
                                     for(let j=0;j<githubData.articles.length;j++){
                                         let item = githubData.articles[j];
@@ -122,10 +122,10 @@ let req = https.request(url,function(res){
                                                         console.log(githubData.urls[i]+' inserted');
                                                         item.guid = item.guid+result.insertId;
                                                         item.ID = result.insertId;
-                                                        connection.query('UPDATE wp_posts SET guid = :guid WHERE id = :ID',item,function(err,result){//新增之后需要根据主键更新guid
+                                                        connection.query('UPDATE wp_posts SET guid = ? WHERE id = ?',[item.guid,item.ID],function(err,result){//新增之后需要根据主键更新guid
                                                             console.log(githubData.urls[i]+'guid updated');
-                                                            console.log(err);
-                                                            console.log(result);
+                                                            //console.log(err);
+                                                            //console.log(result);
                                                         });
                                                         if(j===githubData.articles.length-1){
                                                             connection.end();
@@ -141,21 +141,17 @@ let req = https.request(url,function(res){
                                                     }
                                                 }else{
                                                     //重新设置需要更新的数据
-                                                    local.post_title = item.post_title;
-                                                    local.post_content = item.post_content;
-                                                    local.post_name = item.post_name;
-                                                    local.post_modified = item.post_modified;
-                                                    local.post_modified_gmt = item.post_modified_gmt;
-                                                    local.post_content_filtered = item.post_content_filtered;
-                                                    local.to_ping = item.to_ping;
-                                                    connection.query(`UPDATE wp_posts SET post_title = :post_title ,
-                                                                                          post_content = :post_content ,
-                                                                                          post_name = :post_name ,
-                                                                                          post_modified = :post_modified ,
-                                                                                          post_modified_gmt = :post_modified_gmt ,
-                                                                                          post_content_filtered = :post_content_filtered ,
-                                                                                          to_ping = :to_ping
-                                                                                          WHERE ID = :ID`, local , function(err,result){
+                                                    connection.query(`UPDATE wp_posts SET post_title = ? ,
+                                                                                          post_content = ? ,
+                                                                                          post_name = ? ,
+                                                                                          post_modified = ? ,
+                                                                                          post_modified_gmt = ? ,
+                                                                                          post_content_filtered = ? ,
+                                                                                          to_ping = ?
+                                                                                          WHERE ID = ?`, 
+                                                    [item.post_title,item.post_content,item.post_name,item.post_modified,
+                                                    item.post_modified_gmt,item.post_content_filtered,item.to_ping,local.ID] , 
+                                                    function(err,result){
                                                         console.log(githubData.urls[i]+' updated');
                                                         //console.log(err);
                                                         //console.log(result);
