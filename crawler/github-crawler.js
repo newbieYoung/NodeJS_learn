@@ -106,8 +106,6 @@ let req = https.request(url,function(res){
 
                                 githubData.articles.push(article);
 
-                                console.log(article);
-
                                 //所有文章已经爬取完毕，开始数据处理
                                 if(i===githubData.urls.length-1){
                                     for(let j=0;j<githubData.articles.length;j++){
