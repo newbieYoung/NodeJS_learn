@@ -88,7 +88,7 @@ let req = https.request(url,function(res){
                                 article.post_title = $article.children().eq(0).text();
                                 $article.children().eq(0).remove();//移除标题
                                 article.post_content = $article.html();
-                                article.post_content = article.post_content.replace(/\n/g, '');
+                                article.post_content = article.post_content.replace(/\n      \n        \n        /g, '\n');
                                 article.post_name = encodeURIComponent(article.post_title);
                                 article.post_modified = dateStr;
                                 article.post_modified_gmt = dateGmtStr;
@@ -105,6 +105,8 @@ let req = https.request(url,function(res){
                                 article.pinged = '';
 
                                 githubData.articles.push(article);
+
+                                console.log(article);
 
                                 //所有文章已经爬取完毕，开始数据处理
                                 if(i===githubData.urls.length-1){
