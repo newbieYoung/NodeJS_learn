@@ -12,13 +12,13 @@ let mysql = require('mysql');
 
 console.log('start '+moment().format('YYYY-MM-DD hh:mm:ss'));
 
-let connection = mysql.createConnection({
-    host:'localhost',
-    user:'root',
-    password:'http://young.com',
+let pool = mysql.createPool({
+    connectionLimit : 10,
+    host            : 'localhost',
+    user            : 'root',
+    password        : 'http://young.com',
     database:'newbieweb'
 });
-connection.connect();
 
 let url = 'https://github.com/newbieYoung/NewbieWebArticles';
 
@@ -36,7 +36,8 @@ let req = https.request(url,function(res){
         data += chunk;
     });
     res.on('end',function(){
-        env(data,function(errors,window){
+        env(data,function(err,window){
+            if (err) throw err;
         	//解析文章列表获得所有文章的URL
             let $ = _$(window);
             let $items = $('div.file-wrap table.files tr.js-navigation-item');
@@ -59,7 +60,8 @@ let req = https.request(url,function(res){
             			data += chunk;
             		});
             		res.on('end',function(){
-            			env(data,function(errors,window){
+            			env(data,function(err,window){
+                            if (err) throw err;
             				let content = '';
             				let $ = _$(window);
             				//由于通过插件把markdown转换成html之后Github显示时还会处理一次，所以这里需要解析文章本身的html代码
@@ -68,7 +70,8 @@ let req = https.request(url,function(res){
             				for(let z=0;z<$trs.length;z++){
             					content += $trs.eq(z).text();
             				}
-                            env(content,function(errors,window){
+                            env(content,function(err,window){
+                                if (err) throw err;
                                 let $ = _$(window);
                                 let $article = $('article.markdown-body');
                                 let now = moment();
@@ -111,21 +114,23 @@ let req = https.request(url,function(res){
                                     for(let j=0;j<githubData.articles.length;j++){
                                         let item = githubData.articles[j];
                                         let local;//本地数据
-                                        connection.query('select * from wp_posts where post_excerpt = ?', [item.post_excerpt], function(err, result) {
+                                        
+                                        pool.query('select * from wp_posts where post_excerpt = ?', [item.post_excerpt], function(err, result) {
+                                            if (err) throw err;
                                             let iterator = result[Symbol.iterator]();
                                             let local = iterator.next().value;//查出来的结果应该有且只有一个，否则数据出现异常
                                             //不存在该文章，新增
                                             if(!local){
-                                                connection.query('INSERT INTO wp_posts SET ?', item, function(err, result) {
+                                                pool.query('INSERT INTO wp_posts SET ?', item, function(err, result) {
+                                                    if (err) throw err;
                                                     if(result.insertId){
                                                         console.log(githubData.urls[j]+' inserted');
                                                         item.guid = item.guid+result.insertId;
                                                         item.ID = result.insertId;
-                                                        connection.query('UPDATE wp_posts SET guid = ? WHERE id = ?',[item.guid,item.ID],function(err,result){//新增之后需要根据主键更新guid
+                                                        pool.query('UPDATE wp_posts SET guid = ? WHERE id = ?',[item.guid,item.ID],function(err,result){//新增之后需要根据主键更新guid
+                                                            if (err) throw err;
                                                             console.log(githubData.urls[j]+' guid updated');
-                                                            if(j===githubData.articles.length-1){
-                                                                end()
-                                                            }
+                                                            finish();
                                                         });
                                                     }
                                                 });
@@ -133,12 +138,10 @@ let req = https.request(url,function(res){
                                                 //本地文章是最新
                                                 if(local.to_ping === item.to_ping){
                                                     console.log(githubData.urls[j]+' no change');
-                                                    if(j===githubData.articles.length-1){
-                                                        end()
-                                                    }
+                                                    finish();
                                                 }else{
                                                     //重新设置需要更新的数据
-                                                    connection.query(`UPDATE wp_posts SET post_title = ? ,
+                                                    pool.query(`UPDATE wp_posts SET post_title = ? ,
                                                                                           post_content = ? ,
                                                                                           post_name = ? ,
                                                                                           post_modified = ? ,
@@ -149,14 +152,14 @@ let req = https.request(url,function(res){
                                                     [item.post_title,item.post_content,item.post_name,item.post_modified,
                                                     item.post_modified_gmt,item.post_content_filtered,item.to_ping,local.ID] , 
                                                     function(err,result){
+                                                        if (err) throw err;
                                                         console.log(githubData.urls[j]+' updated');
-                                                        if(j===githubData.articles.length-1){
-                                                            end();
-                                                        }
+                                                        finish();
                                                     });
                                                 }
                                             }
                                         });
+                                        
                                     }
                                 }
                             });
@@ -173,9 +176,8 @@ let req = https.request(url,function(res){
 
 req.end();
 
-//结束
-function end(){
-    connection.end();
+//完成一次数据处理
+function finish(){
     console.log('end '+moment().format('YYYY-MM-DD hh:mm:ss'));
 }
 
