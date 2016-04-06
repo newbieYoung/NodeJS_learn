@@ -8,12 +8,26 @@ let env = require('jsdom').env;
 let fs = require('fs');
 let _$ = require('jquery');
 let moment = require('moment');
+let mysql = require('mysql');
+
+let connection = mysql.createConnection({
+    host:'localhost',
+    user:'root',
+    password:'http://young.com',
+    database:'newbieweb'
+});
+connection.connect();
 
 let url = 'https://github.com/newbieYoung/NewbieWebArticles';
 
-let articles = [];
-let data = '';
+let githubData = {
+    dates:[],
+    urls:[],
+    articles:[]
+}
 let req = https.request(url,function(res){
+
+    let data = '';
 
     res.setEncoding('utf-8');
     res.on('data',function(chunk){
@@ -23,7 +37,6 @@ let req = https.request(url,function(res){
         env(data,function(errors,window){
         	//解析文章列表获得所有文章的URL
             let $ = _$(window);
-            let urls = [];
             let $items = $('div.file-wrap table.files tr.js-navigation-item');
             for(let i=0;i<$items.length;i++){
                 let $item = $items.eq(i);
@@ -31,13 +44,14 @@ let req = https.request(url,function(res){
                 let href = $a.attr('href');
                 let url =  `https://github.com${href}`;
                 if(isHtml(url)){
-                	urls.push(url);
+                	githubData.urls.push(url);
+                    githubData.dates.push($item.find('td.age span time').attr('datetime'));
                 }
             }
             //解析文章并存入数据库
-            for(let i=0;i<urls.length;i++){
+            for(let i=0;i<githubData.urls.length;i++){
             	let data = '';
-            	let req = https.request(urls[i],function(res){
+            	let req = https.request(githubData.urls[i],function(res){
             		res.setEncoding('utf-8');
             		res.on('data',function(chunk){
             			data += chunk;
@@ -59,17 +73,16 @@ let req = https.request(url,function(res){
                                 let dateStr = now.format('YYYY-MM-DD HH:mm:ss');
                                 let dateGmtStr = now.add(-8, 'hours').format('YYYY-MM-DD HH:mm:ss');
                                 let article = {};
-                                //默认数据
+                                
+                                //整理数据
                                 article.post_author = 1;
                                 article.post_date = dateStr;
                                 article.post_date_gmt = dateGmtStr;
                                 article.post_status = 'publish';
                                 article.comment_status = 'open';
                                 article.ping_status = 'open';
-                                article.post_parent = 0;
                                 article.menu_order = 0;
                                 article.post_type = 'post';
-                                article.comment_count = 0;
                                 article.post_title = $article.children().eq(0).text();
                                 $article.children().eq(0).remove();//移除标题
                                 article.post_content = $article.html();
@@ -82,8 +95,86 @@ let req = https.request(url,function(res){
                                 article.menu_order = 0;
                                 article.post_type = 'post';
                                 article.comment_count = 0;
+                                //不知道这两个字段本来的含义，但是这里用来保存远程url路径和远程更新时间，用来判断是新增还是更新
+                                article.post_excerpt = githubData.urls[i];//该文章远程url路径
+                                article.to_ping = githubData.dates[i];//该文章远程更新时间
+                                //部分字段不能为空
+                                article.pinged = '';
+
+                                githubData.articles.push(article);
                                 
-                                console.log(article);
+                                //所有文章已经爬去完毕，开始数据处理
+                                if(i===githubData.urls.length-1){
+                                    for(let j=0;j<githubData.articles.length;j++){
+                                        let item = githubData.articles[j];
+                                        let local;//本地数据
+                                        connection.query('select * from wp_posts where post_excerpt = ?', [item.post_excerpt], function(err, result) {
+                                            //console.log(err);
+                                            //console.log(result);
+                                            let iterator = result[Symbol.iterator]();
+                                            let local = iterator.next().value;//查出来的结果应该有且只有一个，否则数据出现异常
+                                            //不存在该文章，新增
+                                            if(!local){
+                                                connection.query('INSERT INTO wp_posts SET ?', item, function(err, result) {
+                                                    //console.log(err);
+                                                    //console.log(result);
+                                                    if(result.insertId){
+                                                        console.log(githubData.urls[i]+' inserted');
+                                                        item.guid = item.guid+result.insertId;
+                                                        item.ID = result.insertId;
+                                                        connection.query('UPDATE wp_posts SET guid = :guid WHERE id = :ID',item,function(err,result){//新增之后需要根据主键更新guid
+                                                            console.log(githubData.urls[i]+'guid updated');
+                                                            console.log(err);
+                                                            console.log(result);
+                                                        });
+                                                        if(j===githubData.articles.length-1){
+                                                            connection.end();
+                                                        }
+                                                    }
+                                                });
+                                            }else{
+                                                //本地文章是最新
+                                                if(local.to_ping === item.to_ping){
+                                                    console.log(githubData.urls[i]+' no change');
+                                                    if(j===githubData.articles.length-1){
+                                                        connection.end();
+                                                    }
+                                                }else{
+                                                    //重新设置需要更新的数据
+                                                    local.post_title = item.post_title;
+                                                    local.post_content = item.post_content;
+                                                    local.post_name = item.post_name;
+                                                    local.post_modified = item.post_modified;
+                                                    local.post_modified_gmt = item.post_modified_gmt;
+                                                    local.post_content_filtered = item.post_content_filtered;
+                                                    local.to_ping = item.to_ping;
+                                                    connection.query(`UPDATE wp_posts SET post_title = :post_title ,
+                                                                                          post_content = :post_content ,
+                                                                                          post_name = :post_name ,
+                                                                                          post_modified = :post_modified ,
+                                                                                          post_modified_gmt = :post_modified_gmt ,
+                                                                                          post_content_filtered = :post_content_filtered ,
+                                                                                          to_ping = :to_ping
+                                                                                          WHERE ID = :ID`, local , function(err,result){
+                                                        console.log(githubData.urls[i]+' updated');
+                                                        //console.log(err);
+                                                        //console.log(result);
+                                                        if(j===githubData.articles.length-1){
+                                                            connection.end();
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                        });
+                                        // connection.query('INSERT INTO wp_posts SET ?', item, function(err, result) {
+                                        //     console.log(err);
+                                        //     console.log(result);
+                                        //     if(j===githubData.articles.length-1){
+                                        //         connection.end();
+                                        //     }
+                                        // });
+                                    }
+                                }
 
                                 // fs.writeFile('test.txt',article.post_content,function(err){
                                 //     if (err) throw err;
@@ -95,7 +186,6 @@ let req = https.request(url,function(res){
             	});
             	req.end();
             }
-            //console.log(urls);
             
         });
     });
