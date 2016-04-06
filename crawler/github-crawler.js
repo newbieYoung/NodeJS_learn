@@ -7,6 +7,7 @@ let https = require("https");
 let env = require('jsdom').env;
 let fs = require('fs');
 let _$ = require('jquery');
+let moment = require('moment');
 
 let url = 'https://github.com/newbieYoung/NewbieWebArticles';
 
@@ -51,23 +52,44 @@ let req = https.request(url,function(res){
             				for(let i=0;i<$trs.length;i++){
             					content += $trs.eq(i).text();
             				}
-            				let article = {};
-            				//默认数据
-            				article.post_author = 1;
-            				article.post_status = 'publish';
-            				article.comment_status = 'open';
-            				article.ping_status = 'open';
-            				article.post_parent = 0;
-            				article.menu_order = 0;
-            				article.post_type = 'post';
-            				article.comment_count = 0;
-            				//debugger;
-            				console.log(article);
+                            env(content,function(errors,window){
+                                let $ = _$(window);
+                                let $article = $('article.markdown-body');
+                                let now = moment();
+                                let dateStr = now.format('YYYY-MM-DD HH:mm:ss');
+                                let dateGmtStr = now.add(-8, 'hours').format('YYYY-MM-DD HH:mm:ss');
+                                let article = {};
+                                //默认数据
+                                article.post_author = 1;
+                                article.post_date = dateStr;
+                                article.post_date_gmt = dateGmtStr;
+                                article.post_status = 'publish';
+                                article.comment_status = 'open';
+                                article.ping_status = 'open';
+                                article.post_parent = 0;
+                                article.menu_order = 0;
+                                article.post_type = 'post';
+                                article.comment_count = 0;
+                                article.post_title = $article.children().eq(0).text();
+                                $article.children().eq(0).remove();//移除标题
+                                article.post_content = $article.html();
+                                article.post_name = encodeURIComponent(article.post_title);
+                                article.post_modified = dateStr;
+                                article.post_modified_gmt = dateGmtStr;
+                                article.post_content_filtered = article.post_title;
+                                article.post_parent = 0;
+                                article.guid = 'http://www.newbieweb.me/?p=';
+                                article.menu_order = 0;
+                                article.post_type = 'post';
+                                article.comment_count = 0;
+                                
+                                console.log(article);
 
-            				fs.writeFile('test.txt',content,function(err){
-				                if (err) throw err;
-				                console.log('已输出调试数据于test.txt文件中');
-				            });
+                                // fs.writeFile('test.txt',article.post_content,function(err){
+                                //     if (err) throw err;
+                                //     console.log('已输出调试数据于test.txt文件中');
+                                // });
+                            });
             			})
             		});
             	});
