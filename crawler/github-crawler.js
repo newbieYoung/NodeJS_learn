@@ -24,12 +24,12 @@ memwatch.on('leak', function(info) {
 
 //定时任务
 let sched = later.parse.recur()
-            .every(10).minute();//每两小时执行一次
+            .every(2).hour();//每两小时执行一次
 later.setInterval(crawler, sched);
 
 //数据库连接池
 let pool = mysql.createPool({
-    connectionLimit : 10,
+    connectionLimit : 1,
     host            : 'rm-wz94279gwn3ygk50h.mysql.rds.aliyuncs.com',
     user            : 'young',
     password        : 'newbie79923327',
