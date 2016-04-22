@@ -11,17 +11,28 @@ let moment = require('moment');
 let mysql = require('mysql');
 let later = require('later');
 
+//监听垃圾回收
+let memwatch = require('memwatch');
+let heapdump = require('heapdump');
+memwatch.on('leak', function(info) {
+    let file = '/tmp/github-crawler-' + process.pid + '-' + Date.now() + '.heapsnapshot';
+    heapdump.writeSnapshot(file, function(err){
+        if (err) console.error(err);
+        else console.error('Wrote snapshot: ' + file);
+    });
+});
+
 //定时任务
 let sched = later.parse.recur()
-            .every(2).hour();//每两小时执行一次
+            .every(10).minute();//每两小时执行一次
 later.setInterval(crawler, sched);
 
 //数据库连接池
 let pool = mysql.createPool({
     connectionLimit : 10,
-    host            : 'localhost',
-    user            : 'root',
-    password        : 'http://young.com',
+    host            : 'rm-wz94279gwn3ygk50h.mysql.rds.aliyuncs.com',
+    user            : 'young',
+    password        : 'newbie79923327',
     database:'newbieweb'
 });
 
