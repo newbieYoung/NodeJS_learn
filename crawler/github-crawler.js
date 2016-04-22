@@ -12,7 +12,7 @@ let mysql = require('mysql');
 let later = require('later');
 
 //监听垃圾回收
-let memwatch = require('memwatch');
+let memwatch = require('memwatch-next');
 let heapdump = require('heapdump');
 memwatch.on('leak', function(info) {
     let file = '/tmp/github-crawler-' + process.pid + '-' + Date.now() + '.heapsnapshot';
