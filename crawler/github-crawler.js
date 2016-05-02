@@ -8,42 +8,57 @@ let env = require('jsdom').env;
 let fs = require('fs');
 let _$ = require('jquery');
 let moment = require('moment');
-let mysql = require('mysql');
-let later = require('later');
+
+//普通常量
+let url = 'https://github.com/newbieYoung/NewbieWebArticles';//远程地址
+let timeFormatStr = 'YYYY-MM-DD hh:mm:ss';
+let prevStr = 'nb_';
+let uniqueStr = process.pid+'-'+Date.now();
+
+//日志
+let winston = require('winston');
+let logger = new (winston.Logger)({
+    transports: [
+        new (winston.transports.Console)(),
+        new (winston.transports.File)({ filename: '/tmp/github-crawler-'+uniqueStr+'.log' })
+    ]
+});
 
 //监听垃圾回收
 let memwatch = require('memwatch-next');
 let heapdump = require('heapdump');
 memwatch.on('leak', function(info) {
-    let file = '/tmp/github-crawler-' + process.pid + '-' + Date.now() + '.heapsnapshot';
+    let file = '/tmp/github-crawler-'+uniqueStr+'.heapsnapshot';
     heapdump.writeSnapshot(file, function(err){
-        if (err) console.error(err);
-        else console.error('Wrote snapshot: ' + file);
+        if (err){
+            logger.log('error',err);
+        }else{
+            logger.log('info','Wrote snapshot: ' + file);
+        };
     });
 });
 
 //定时任务
+let later = require('later');
 let sched = later.parse.recur()
-            .every(2).hour();//每两小时执行一次
+            .every(2).minute();//每10分钟执行一次
+            //.every(2).hour();//每两小时执行一次
 later.setInterval(crawler, sched);
 
 //数据库连接池
+let mysql = require('mysql');
 let pool = mysql.createPool({
     connectionLimit : 1,
-    host            : 'rm-wz94279gwn3ygk50h.mysql.rds.aliyuncs.com',
+    host            : 'rm-wz94279gwn3ygk50ho.mysql.rds.aliyuncs.com',
     user            : 'young',
     password        : 'newbie79923327',
     database:'newbieweb'
 });
 
-//远程url地址
-let url = 'https://github.com/newbieYoung/NewbieWebArticles';
-let timeFormatStr = 'YYYY-MM-DD hh:mm:ss';
-
 //爬虫
 function crawler(){
-    console.log('--------------------------------------');
-    console.log('start '+moment().format(timeFormatStr));
+    logger.log('info','--------------------------------------');
+    logger.log('info','start '+moment().format(timeFormatStr));
 
     let githubData = {
         dates:[],
@@ -60,10 +75,15 @@ function crawler(){
         });
         res.on('end',function(){
             env(data,function(err,window){
-                if (err) throw err;
+                if (err){
+                    logger.log('error',err);
+                }
                 //解析文章列表获得所有文章的URL
                 let $ = _$(window);
                 let $items = $('div.file-wrap table.files tr.js-navigation-item');
+                if($items.length<=0){
+                    logger.log('error','github网站html结构发生变化');
+                }
                 for(let i=0;i<$items.length;i++){
                     let $item = $items.eq(i);
                     let $a = $item.find('td.content span a');
@@ -71,11 +91,12 @@ function crawler(){
                     let url =  `https://github.com${href}`;
                     if(isHtml(url)){
                         githubData.urls.push(url);
-                        githubData.dates.push($item.find('td.age span time').attr('datetime'));
+                        githubData.dates.push($item.find('td.age span').children().eq(0).attr('datetime'));
                     }
                 }
                 //解析文章并存入数据库
                 for(let i=0;i<githubData.urls.length;i++){
+                    logger.log('info',githubData.urls[i]);
                     let data = '';
                     let req = https.request(githubData.urls[i],function(res){
                         res.setEncoding('utf-8');
@@ -84,7 +105,9 @@ function crawler(){
                         });
                         res.on('end',function(){
                             env(data,function(err,window){
-                                if (err) throw err;
+                                if (err){
+                                    logger.log('error',err);
+                                };
                                 let content = '';
                                 let $ = _$(window);
                                 //由于通过插件把markdown转换成html之后Github显示时还会处理一次，所以这里需要解析文章本身的html代码
@@ -94,7 +117,9 @@ function crawler(){
                                     content += $trs.eq(z).text();
                                 }
                                 env(content,function(err,window){
-                                    if (err) throw err;
+                                    if (err){
+                                        logger.log('error',err);
+                                    };
                                     let $ = _$(window);
                                     let $article = $('article.markdown-body');
                                     let now = moment();
@@ -138,21 +163,27 @@ function crawler(){
                                             let item = githubData.articles[j];
                                             let local;//本地数据
                                             
-                                            pool.query('select * from wp_posts where post_excerpt = ?', [item.post_excerpt], function(err, result) {
-                                                if (err) throw err;
+                                            pool.query('select * from '+prevStr+'wp_posts where post_excerpt = ?', [item.post_excerpt], function(err, result) {
+                                                if (err){
+                                                    logger.log('error',err);
+                                                };
                                                 let iterator = result[Symbol.iterator]();
                                                 let local = iterator.next().value;//查出来的结果应该有且只有一个，否则数据出现异常
                                                 //不存在该文章，新增
                                                 if(!local){
-                                                    pool.query('INSERT INTO wp_posts SET ?', item, function(err, result) {
-                                                        if (err) throw err;
+                                                    pool.query('INSERT INTO '+prevStr+'wp_posts SET ?', item, function(err, result) {
+                                                        if (err){
+                                                            logger.log('error',err);
+                                                        };
                                                         if(result.insertId){
-                                                            console.log(githubData.urls[j]+' inserted');
+                                                            logger.log('info',githubData.urls[j]+' inserted');
                                                             item.guid = item.guid+result.insertId;
                                                             item.ID = result.insertId;
-                                                            pool.query('UPDATE wp_posts SET guid = ? WHERE id = ?',[item.guid,item.ID],function(err,result){//新增之后需要根据主键更新guid
-                                                                if (err) throw err;
-                                                                console.log(githubData.urls[j]+' guid updated');
+                                                            pool.query('UPDATE '+prevStr+'wp_posts SET guid = ? WHERE id = ?',[item.guid,item.ID],function(err,result){//新增之后需要根据主键更新guid
+                                                                if (err){
+                                                                    logger.log('error',err);
+                                                                };
+                                                                logger.log('info',githubData.urls[j]+' guid updated');
                                                                 finish();
                                                             });
                                                         }
@@ -160,11 +191,11 @@ function crawler(){
                                                 }else{
                                                     //本地文章是最新
                                                     if(local.to_ping === item.to_ping){
-                                                        console.log(githubData.urls[j]+' no change');
+                                                        logger.log('info',githubData.urls[j]+' no change');
                                                         finish();
                                                     }else{
                                                         //重新设置需要更新的数据
-                                                        pool.query(`UPDATE wp_posts SET post_title = ? ,
+                                                        pool.query(`UPDATE ${prevStr}wp_posts SET post_title = ? ,
                                                                                               post_content = ? ,
                                                                                               post_name = ? ,
                                                                                               post_modified = ? ,
@@ -175,8 +206,11 @@ function crawler(){
                                                         [item.post_title,item.post_content,item.post_name,item.post_modified,
                                                         item.post_modified_gmt,item.post_content_filtered,item.to_ping,local.ID] , 
                                                         function(err,result){
-                                                            if (err) throw err;
-                                                            console.log(githubData.urls[j]+' updated');
+                                                            if (err){
+                                                                logger.log('error',err);
+                                                            }else{
+                                                                logger.log('info',githubData.urls[j]+' updated');
+                                                            }
                                                             finish();
                                                         });
                                                     }
@@ -201,7 +235,7 @@ function crawler(){
 
 //完成一次数据处理
 function finish(){
-    console.log('end '+moment().format(timeFormatStr));
+    logger.log('info','end '+moment().format(timeFormatStr));
 }
 
 //根据URL判断某资源是否是html文件
