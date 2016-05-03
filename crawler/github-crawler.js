@@ -161,10 +161,14 @@ function crawler(){
                                     if(isArrayHasNull(githubData.articles)){
                                         for(let j=0;j<githubData.articles.length;j++){
                                             let item = githubData.articles[j];
+                                            if(item.post_excerpt!=githubData.urls[j]||item.to_ping!=githubData.dates[j]){
+                                                logger.log('error','文章远程链接、文章内容以及文章远程更新时间对应关系混乱');
+                                            }
                                             let local;//本地数据
 
                                             //数据库连接池的使用方式是先获取连接然后再使用，操作完成之后再释放否则会出现内存泄漏的情况
                                             pool.getConnection(function(err, connection) {
+                                                logger.log('debug','get connection at '+moment().format(timeFormatStr));
                                                 connection.query('select * from '+prevStr+'wp_posts where post_excerpt = ?', [item.post_excerpt], function(err, result) {
                                                     if (err){
                                                         logger.log('error',err);
@@ -192,11 +196,6 @@ function crawler(){
                                                         });
                                                     }else{
                                                         //本地文章是最新
-                                                        logger.log('error',j);
-                                                        logger.log('error',local.to_ping+' '+item.to_ping);
-                                                        logger.log('error',githubData.articles[j]===item);
-                                                        logger.log('error',item.post_excerpt);
-                                                        logger.log('error',githubData.urls);
                                                         if(local.to_ping === item.to_ping){
                                                             logger.log('info',item.post_excerpt+' no change');
                                                             finish(connection);
@@ -243,7 +242,7 @@ function crawler(){
 //完成一次数据处理
 function finish(connection){
     connection.release();
-    logger.log('info','end '+moment().format(timeFormatStr));
+    logger.log('debug','connection release at '+moment().format(timeFormatStr));
 }
 
 //判断数组中是否存在空元素
