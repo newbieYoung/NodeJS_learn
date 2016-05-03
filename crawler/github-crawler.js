@@ -158,7 +158,7 @@ function crawler(){
                                     githubData.articles[i] = article;
                         
                                     //所有文章已经爬取完毕，开始数据处理
-                                    if(isArrayHasNull(githubData.articles)){
+                                    if(!isArrayHasNull(githubData.articles)){
                                         for(let j=0;j<githubData.articles.length;j++){
                                             let item = githubData.articles[j];
                                             if(item.post_excerpt!=githubData.urls[j]||item.to_ping!=githubData.dates[j]){
