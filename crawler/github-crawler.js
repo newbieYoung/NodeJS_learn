@@ -168,7 +168,7 @@ function crawler(){
 
                                             //数据库连接池的使用方式是先获取连接然后再使用，操作完成之后再释放否则会出现内存泄漏的情况
                                             pool.getConnection(function(err, connection) {
-                                                logger.log('debug','get connection at '+moment().format(timeFormatStr));
+                                                logger.log('info','get connection at '+moment().format(timeFormatStr));
                                                 connection.query('select * from '+prevStr+'wp_posts where post_excerpt = ?', [item.post_excerpt], function(err, result) {
                                                     if (err){
                                                         logger.log('error',err);
@@ -242,7 +242,7 @@ function crawler(){
 //完成一次数据处理
 function finish(connection){
     connection.release();
-    logger.log('debug','connection release at '+moment().format(timeFormatStr));
+    logger.log('info','connection release at '+moment().format(timeFormatStr));
 }
 
 //判断数组中是否存在空元素
