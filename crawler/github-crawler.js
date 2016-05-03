@@ -41,8 +41,8 @@ memwatch.on('leak', function(info) {
 //定时任务
 let later = require('later');
 let sched = later.parse.recur()
-            .every(2).minute();//每10分钟执行一次
-            //.every(2).hour();//每两小时执行一次
+            .every(2).minute();//每2分钟执行一次
+            //.every(2).hour();//每2小时执行一次
 later.setInterval(crawler, sched);
 
 //数据库连接池
@@ -96,7 +96,6 @@ function crawler(){
                 }
                 //解析文章并存入数据库
                 for(let i=0;i<githubData.urls.length;i++){
-                    logger.log('info',githubData.urls[i]);
                     let data = '';
                     let req = https.request(githubData.urls[i],function(res){
                         res.setEncoding('utf-8');
