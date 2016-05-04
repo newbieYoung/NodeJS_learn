@@ -25,18 +25,8 @@ let logger = new (winston.Logger)({
 });
 
 //监听垃圾回收
-let memwatch = require('memwatch-next');
+let memwatch = require('memwatch-next');//not work
 let heapdump = require('heapdump');
-memwatch.on('leak', function(info) {
-    let file = '/tmp/github-crawler-'+uniqueStr+'.heapsnapshot';
-    heapdump.writeSnapshot(file, function(err){
-        if (err){
-            logger.log('error',err);
-        }else{
-            logger.log('info','Wrote snapshot: ' + file);
-        };
-    });
-});
 
 //定时任务
 let later = require('later');
@@ -156,9 +146,10 @@ function crawler(){
                                     //由于回调函数的执行不一定是按照先后顺序来的，所以这里不能使用push否则会导致文章次序混乱
                                     //githubData.articles.push(article);
                                     githubData.articles[i] = article;
-                        
+                    
                                     //所有文章已经爬取完毕，开始数据处理
-                                    if(!isArrayHasNull(githubData.articles)){
+                                    if(!isArrayHasNull(githubData.articles)&&githubData.articles.length===githubData.urls.length){
+                                        logger.log('info',githubData.urls);
                                         for(let j=0;j<githubData.articles.length;j++){
                                             let item = githubData.articles[j];
                                             if(item.post_excerpt!=githubData.urls[j]||item.to_ping!=githubData.dates[j]){
@@ -225,16 +216,20 @@ function crawler(){
                                             });
                                         }
                                     }
+                                    // free memory associated with the window
+                                    window.close();
                                 });
+                                // free memory associated with the window
+                                window.close();
                             })
                         });
                     });
                     req.end();
                 }
-                
+                // free memory associated with the window
+                window.close();
             });
         });
-
     });
     req.end();
 }
@@ -242,6 +237,15 @@ function crawler(){
 //完成一次数据处理
 function finish(connection){
     connection.release();
+    // //生成内存快照
+    // let file = '/tmp/github-crawler-'+uniqueStr+'.heapsnapshot';
+    // heapdump.writeSnapshot(file, function(err){
+    //     if (err){
+    //         logger.log('error',err);
+    //     }else{
+    //         logger.log('info','Wrote snapshot: ' + file);
+    //     };
+    // });
     logger.log('info','connection release at '+moment().format(timeFormatStr));
 }
 
