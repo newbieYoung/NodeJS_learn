@@ -237,15 +237,15 @@ function crawler(){
 //完成一次数据处理
 function finish(connection){
     connection.release();
-    // //生成内存快照
-    // let file = '/tmp/github-crawler-'+uniqueStr+'.heapsnapshot';
-    // heapdump.writeSnapshot(file, function(err){
-    //     if (err){
-    //         logger.log('error',err);
-    //     }else{
-    //         logger.log('info','Wrote snapshot: ' + file);
-    //     };
-    // });
+    //生成内存快照
+    let file = '/tmp/github-crawler-'+process.pid+'-'+Date.now()+'.heapsnapshot';
+    heapdump.writeSnapshot(file, function(err){
+        if (err){
+            logger.log('error',err);
+        }else{
+            logger.log('info','Wrote snapshot: ' + file);
+        };
+    });
     logger.log('info','connection release at '+moment().format(timeFormatStr));
 }
 
