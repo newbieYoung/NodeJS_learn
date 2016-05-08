@@ -147,9 +147,9 @@ function crawler(){
                                     //githubData.articles.push(article);
                                     githubData.articles[i] = article;
                     
-                                    //所有文章已经爬取完毕，开始数据处理
-                                    if(!isArrayHasNull(githubData.articles)&&githubData.articles.length===githubData.urls.length){
-                                        logger.log('info',githubData.urls);
+                                    //所有文章已经爬取完毕并且校验完成，开始数据处理
+                                    if(!isArrayHasNull(githubData.articles)&&checkArticles(githubData.articles)&&githubData.articles.length===githubData.urls.length){
+                                        //logger.log('info',githubData.urls);
                                         for(let j=0;j<githubData.articles.length;j++){
                                             let item = githubData.articles[j];
                                             if(item.post_excerpt!=githubData.urls[j]||item.to_ping!=githubData.dates[j]){
@@ -173,14 +173,14 @@ function crawler(){
                                                                 logger.log('error',err);
                                                             };
                                                             if(result.insertId){
-                                                                logger.log('info',item.post_excerpt+' inserted');
+                                                                //logger.log('info',item.post_excerpt+' inserted');
                                                                 item.guid = item.guid+result.insertId;
                                                                 item.ID = result.insertId;
                                                                 connection.query('UPDATE '+prevStr+'wp_posts SET guid = ? WHERE id = ?',[item.guid,item.ID],function(err,result){//新增之后需要根据主键更新guid
                                                                     if (err){
                                                                         logger.log('error',err);
                                                                     };
-                                                                    logger.log('info',item.post_excerpt+' guid updated');
+                                                                    //logger.log('info',item.post_excerpt+' guid updated');
                                                                     finish(connection);
                                                                 });
                                                             }
@@ -188,7 +188,7 @@ function crawler(){
                                                     }else{
                                                         //本地文章是最新
                                                         if(local.to_ping === item.to_ping){
-                                                            logger.log('info',item.post_excerpt+' no change');
+                                                            //logger.log('info',item.post_excerpt+' no change');
                                                             finish(connection);
                                                         }else{
                                                             //重新设置需要更新的数据
@@ -206,7 +206,7 @@ function crawler(){
                                                                 if (err){
                                                                     logger.log('error',err);
                                                                 }else{
-                                                                    logger.log('info',item.post_excerpt+' updated');
+                                                                    //logger.log('info',item.post_excerpt+' updated');
                                                                 }
                                                                 finish(connection);
                                                             });
@@ -238,14 +238,14 @@ function crawler(){
 function finish(connection){
     connection.release();
     //生成内存快照
-    let file = '/tmp/github-crawler-'+process.pid+'-'+Date.now()+'.heapsnapshot';
-    heapdump.writeSnapshot(file, function(err){
-        if (err){
-            logger.log('error',err);
-        }else{
-            logger.log('info','Wrote snapshot: ' + file);
-        };
-    });
+    // let file = '/tmp/github-crawler-'+process.pid+'-'+Date.now()+'.heapsnapshot';
+    // heapdump.writeSnapshot(file, function(err){
+    //     if (err){
+    //         logger.log('error',err);
+    //     }else{
+    //         logger.log('info','Wrote snapshot: ' + file);
+    //     };
+    // });
     logger.log('info','connection release at '+moment().format(timeFormatStr));
 }
 
@@ -257,6 +257,23 @@ function isArrayHasNull(array){
         }
     }
     return false;
+}
+
+//校验文章，通过返回true，失败返回false
+function checkArticles(articles){
+    let num = 0;
+    for(let i=0;i<articles.length;i++){
+        let item = articles[i];
+        if(!item.to_ping&&!item.post_excerpt){
+            logger.log('error',`${item.post_title} to_ping=${item.to_ping} post_excerpt=${item.post_excerpt}`);
+            num++;
+        }
+    }
+    if(num>0){
+        return false;
+    }else{
+        return true;
+    }
 }
 
 //根据URL判断某资源是否是html文件
