@@ -13,14 +13,14 @@ let moment = require('moment');
 let url = 'https://github.com/newbieYoung/NewbieWebArticles';//远程地址
 let timeFormatStr = 'YYYY-MM-DD hh:mm:ss';
 let prevStr = 'nb_';
-let uniqueStr = process.pid+'-'+Date.now();
+let uniqueStr = `${process.pid}-${Date.now()}`;
 
 //日志
 let winston = require('winston');
 let logger = new (winston.Logger)({
     transports: [
         new (winston.transports.Console)(),
-        new (winston.transports.File)({ filename: '/tmp/github-crawler-'+uniqueStr+'.log' })
+        new (winston.transports.File)({ filename: `/tmp/github-crawler-${uniqueStr}.log` })
     ]
 });
 
@@ -48,7 +48,7 @@ let pool = mysql.createPool({
 //爬虫
 function crawler(){
     logger.log('info','--------------------------------------');
-    logger.log('info','start '+moment().format(timeFormatStr));
+    logger.log('info',`strat ${moment().format(timeFormatStr)}`);
 
     let githubData = {
         dates:[],
@@ -139,8 +139,7 @@ function crawler(){
                                     article.post_type = 'post';
                                     article.comment_count = 0;
                                     //不知道这两个字段本来的含义，但是这里用来保存远程url路径和远程更新时间，用来判断是新增还是更新
-                                    article.post_excerpt = githubData.urls[i];//该文章远程url路径
-                                    article.to_ping = githubData.dates[i];//该文章远程更新时间
+                                    article.post_excerpt = `${githubData.urls[i]}(${githubData.dates[i]})`;//该文章远程url路径(该文章远程更新时间)
                                     //部分字段不能为空
                                     article.pinged = '';
                                     //由于回调函数的执行不一定是按照先后顺序来的，所以这里不能使用push否则会导致文章次序混乱
@@ -152,15 +151,27 @@ function crawler(){
                                         //logger.log('info',githubData.urls);
                                         for(let j=0;j<githubData.articles.length;j++){
                                             let item = githubData.articles[j];
-                                            if(item.post_excerpt!=githubData.urls[j]||item.to_ping!=githubData.dates[j]){
+                                            if(item.post_excerpt!=`${githubData.urls[j]}(${githubData.dates[j]})`){
                                                 logger.log('error','文章远程链接、文章内容以及文章远程更新时间对应关系混乱');
                                             }
                                             let local;//本地数据
 
                                             //数据库连接池的使用方式是先获取连接然后再使用，操作完成之后再释放否则会出现内存泄漏的情况
                                             pool.getConnection(function(err, connection) {
-                                                logger.log('info','get connection at '+moment().format(timeFormatStr));
-                                                connection.query('select * from '+prevStr+'wp_posts where post_excerpt = ?', [item.post_excerpt], function(err, result) {
+                                                logger.log('info',`get connection at ${moment().format(timeFormatStr)}`);
+
+                                                //每次数据操作时清除掉未发布的文章
+                                                if(j==0){
+                                                    connection.query(`delete from ${prevStr}wp_posts where post_status != ?`, ['publish'],function(err, result){
+                                                        if (err){
+                                                            logger.log('error',err);
+                                                        }else{
+                                                            logger.log('info','delete unpublished articles successfully');
+                                                        }
+                                                    });
+                                                }
+
+                                                connection.query(`select * from ${prevStr}wp_posts where post_excerpt like ?`, [`${githubData.urls[j]}%`], function(err, result) {
                                                     if (err){
                                                         logger.log('error',err);
                                                     };
@@ -168,27 +179,27 @@ function crawler(){
                                                     let local = iterator.next().value;//查出来的结果应该有且只有一个，否则数据出现异常
                                                     //不存在该文章，新增
                                                     if(!local){
-                                                        connection.query('INSERT INTO '+prevStr+'wp_posts SET ?', item, function(err, result) {
+                                                        connection.query(`INSERT INTO ${prevStr}wp_posts SET ?`, item, function(err, result) {
                                                             if (err){
                                                                 logger.log('error',err);
                                                             };
                                                             if(result.insertId){
-                                                                //logger.log('info',item.post_excerpt+' inserted');
+                                                                logger.log('info',item.post_excerpt+' inserted');
                                                                 item.guid = item.guid+result.insertId;
                                                                 item.ID = result.insertId;
-                                                                connection.query('UPDATE '+prevStr+'wp_posts SET guid = ? WHERE id = ?',[item.guid,item.ID],function(err,result){//新增之后需要根据主键更新guid
+                                                                connection.query(`UPDATE ${prevStr}wp_posts SET guid = ? WHERE id = ?`,[item.guid,item.ID],function(err,result){//新增之后需要根据主键更新guid
                                                                     if (err){
                                                                         logger.log('error',err);
                                                                     };
-                                                                    //logger.log('info',item.post_excerpt+' guid updated');
+                                                                    logger.log('info',`${item.post_excerpt} guid updated`);
                                                                     finish(connection);
                                                                 });
                                                             }
                                                         });
                                                     }else{
                                                         //本地文章是最新
-                                                        if(local.to_ping === item.to_ping){
-                                                            //logger.log('info',item.post_excerpt+' no change');
+                                                        if(local.post_excerpt === item.post_excerpt){
+                                                            logger.log('info',`${item.post_excerpt} no change`);
                                                             finish(connection);
                                                         }else{
                                                             //重新设置需要更新的数据
@@ -198,15 +209,15 @@ function crawler(){
                                                                                                   post_modified = ? ,
                                                                                                   post_modified_gmt = ? ,
                                                                                                   post_content_filtered = ? ,
-                                                                                                  to_ping = ?
+                                                                                                  post_excerpt = ?
                                                                                                   WHERE ID = ?`, 
                                                             [item.post_title,item.post_content,item.post_name,item.post_modified,
-                                                            item.post_modified_gmt,item.post_content_filtered,item.to_ping,local.ID] , 
+                                                            item.post_modified_gmt,item.post_content_filtered,item.post_excerpt,local.ID] , 
                                                             function(err,result){
                                                                 if (err){
                                                                     logger.log('error',err);
                                                                 }else{
-                                                                    //logger.log('info',item.post_excerpt+' updated');
+                                                                    logger.log('info',`${item.post_excerpt} updated`);
                                                                 }
                                                                 finish(connection);
                                                             });
@@ -238,15 +249,15 @@ function crawler(){
 function finish(connection){
     connection.release();
     //生成内存快照
-    // let file = '/tmp/github-crawler-'+process.pid+'-'+Date.now()+'.heapsnapshot';
-    // heapdump.writeSnapshot(file, function(err){
-    //     if (err){
-    //         logger.log('error',err);
-    //     }else{
-    //         logger.log('info','Wrote snapshot: ' + file);
-    //     };
-    // });
-    logger.log('info','connection release at '+moment().format(timeFormatStr));
+    let file = `/tmp/github-crawler-${process.pid}-${Date.now()}.heapsnapshot`;
+    heapdump.writeSnapshot(file, function(err){
+        if (err){
+            logger.log('error',err);
+        }else{
+            logger.log('info',`Wrote snapshot: ${file}`);
+        };
+    });
+    logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
 }
 
 //判断数组中是否存在空元素
@@ -264,8 +275,8 @@ function checkArticles(articles){
     let num = 0;
     for(let i=0;i<articles.length;i++){
         let item = articles[i];
-        if(!item.to_ping&&!item.post_excerpt){
-            logger.log('error',`${item.post_title} to_ping=${item.to_ping} post_excerpt=${item.post_excerpt}`);
+        if(!item.post_excerpt){
+            logger.log('error',`${item.post_title} post_excerpt=${item.post_excerpt}`);
             num++;
         }
     }
