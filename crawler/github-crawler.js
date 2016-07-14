@@ -41,7 +41,7 @@ later.setInterval(crawler, sched);
 //数据库连接池
 let mysql = require('mysql');
 let pool = mysql.createPool({
-    connectionLimit : 2,
+    connectionLimit : 1,
     host            : 'rm-wz94279gwn3ygk50ho.mysql.rds.aliyuncs.com',
     user            : 'young',
     password        : 'newbie79923327',
@@ -161,72 +161,73 @@ function crawler(){
 
                                             //数据库连接池的使用方式是先获取连接然后再使用，操作完成之后再释放否则会出现内存泄漏的情况
                                             pool.getConnection(function(err, connection) {
-                                                logger.log('info',`get connection at ${moment().format(timeFormatStr)}`);
-
-                                                //每次数据操作时清除掉未发布的文章
-                                                if(j==0){
-                                                    connection.query(`delete from ${prevStr}wp_posts where post_status != ?`, ['publish'],function(err, result){
+                                                if(err){
+                                                    logger.log('error',err);
+                                                    connection.release();
+                                                }else{
+                                                    logger.log('info',`get connection at ${moment().format(timeFormatStr)}`);
+                                                    connection.query(`select * from ${prevStr}wp_posts where post_excerpt like ?`, [`${githubData.urls[j]}%`], function(err, result) {
                                                         if (err){
                                                             logger.log('error',err);
+                                                            connection.release();
                                                         }else{
-                                                            logger.log('info','delete unpublished articles successfully');
+                                                            let iterator = result[Symbol.iterator]();
+                                                            let local = iterator.next().value;//查出来的结果应该有且只有一个，否则数据出现异常
+                                                            //不存在该文章，新增
+                                                            if(!local){
+                                                                connection.query(`INSERT INTO ${prevStr}wp_posts SET ?`, item, function(err, result) {
+                                                                    if (err){
+                                                                        logger.log('error',err);
+                                                                        connection.release();
+                                                                    }else{
+                                                                        if(result.insertId){
+                                                                            logger.log('info',item.post_excerpt+' inserted');
+                                                                            item.guid = item.guid+result.insertId;
+                                                                            item.ID = result.insertId;
+                                                                            connection.query(`UPDATE ${prevStr}wp_posts SET guid = ? WHERE id = ?`,[item.guid,item.ID],function(err,result){//新增之后需要根据主键更新guid
+                                                                                if (err){
+                                                                                    logger.log('error',err);
+                                                                                }else{
+                                                                                    logger.log('info',`${item.post_excerpt} guid updated`);
+                                                                                }
+                                                                                finish(connection,j);
+                                                                            });
+                                                                        }else{
+                                                                            logger.log('error','新增文章之后没有insertId');
+                                                                            connection.release();
+                                                                        }
+                                                                    }
+                                                                });
+                                                            }else{
+                                                                //本地文章是最新
+                                                                if(local.post_excerpt === item.post_excerpt){
+                                                                    logger.log('info',`${item.post_excerpt} no change`);
+                                                                    finish(connection,j);
+                                                                }else{
+                                                                    //重新设置需要更新的数据
+                                                                    connection.query(`UPDATE ${prevStr}wp_posts SET post_title = ? ,
+                                                                                                          post_content = ? ,
+                                                                                                          post_name = ? ,
+                                                                                                          post_modified = ? ,
+                                                                                                          post_modified_gmt = ? ,
+                                                                                                          post_content_filtered = ? ,
+                                                                                                          post_excerpt = ?
+                                                                                                          WHERE ID = ?`, 
+                                                                    [item.post_title,item.post_content,item.post_name,item.post_modified,
+                                                                    item.post_modified_gmt,item.post_content_filtered,item.post_excerpt,local.ID] , 
+                                                                    function(err,result){
+                                                                        if (err){
+                                                                            logger.log('error',err);
+                                                                        }else{
+                                                                            logger.log('info',`${item.post_excerpt} updated`);
+                                                                        }
+                                                                        finish(connection,j);
+                                                                    });
+                                                                }
+                                                            }
                                                         }
                                                     });
                                                 }
-
-                                                connection.query(`select * from ${prevStr}wp_posts where post_excerpt like ?`, [`${githubData.urls[j]}%`], function(err, result) {
-                                                    if (err){
-                                                        logger.log('error',err);
-                                                    };
-                                                    let iterator = result[Symbol.iterator]();
-                                                    let local = iterator.next().value;//查出来的结果应该有且只有一个，否则数据出现异常
-                                                    //不存在该文章，新增
-                                                    if(!local){
-                                                        connection.query(`INSERT INTO ${prevStr}wp_posts SET ?`, item, function(err, result) {
-                                                            if (err){
-                                                                logger.log('error',err);
-                                                            };
-                                                            if(result.insertId){
-                                                                logger.log('info',item.post_excerpt+' inserted');
-                                                                item.guid = item.guid+result.insertId;
-                                                                item.ID = result.insertId;
-                                                                connection.query(`UPDATE ${prevStr}wp_posts SET guid = ? WHERE id = ?`,[item.guid,item.ID],function(err,result){//新增之后需要根据主键更新guid
-                                                                    if (err){
-                                                                        logger.log('error',err);
-                                                                    };
-                                                                    logger.log('info',`${item.post_excerpt} guid updated`);
-                                                                    finish(connection);
-                                                                });
-                                                            }
-                                                        });
-                                                    }else{
-                                                        //本地文章是最新
-                                                        if(local.post_excerpt === item.post_excerpt){
-                                                            logger.log('info',`${item.post_excerpt} no change`);
-                                                            finish(connection);
-                                                        }else{
-                                                            //重新设置需要更新的数据
-                                                            connection.query(`UPDATE ${prevStr}wp_posts SET post_title = ? ,
-                                                                                                  post_content = ? ,
-                                                                                                  post_name = ? ,
-                                                                                                  post_modified = ? ,
-                                                                                                  post_modified_gmt = ? ,
-                                                                                                  post_content_filtered = ? ,
-                                                                                                  post_excerpt = ?
-                                                                                                  WHERE ID = ?`, 
-                                                            [item.post_title,item.post_content,item.post_name,item.post_modified,
-                                                            item.post_modified_gmt,item.post_content_filtered,item.post_excerpt,local.ID] , 
-                                                            function(err,result){
-                                                                if (err){
-                                                                    logger.log('error',err);
-                                                                }else{
-                                                                    logger.log('info',`${item.post_excerpt} updated`);
-                                                                }
-                                                                finish(connection);
-                                                            });
-                                                        }
-                                                    }
-                                                });
                                             });
                                         }
                                     }
@@ -249,17 +250,29 @@ function crawler(){
 }
 
 //完成一次数据处理
-function finish(connection){
-    connection.release();
+function finish(connection,j){
+    //每次数据操作时清除掉未发布的文章
+    if(j==0){
+        connection.query(`delete from ${prevStr}wp_posts where post_status != ?`, ['publish'],function(err, result){
+            if (err){
+                logger.log('error',err);
+            }else{
+                logger.log('info','delete unpublished articles successfully');
+            }
+            connection.release();
+        });
+    }else{
+        connection.release();
+    }
     //生成内存快照
-    let file = `/tmp/github-crawler-${process.pid}-${Date.now()}.heapsnapshot`;
-    heapdump.writeSnapshot(file, function(err){
-        if (err){
-            logger.log('error',err);
-        }else{
-            logger.log('info',`Wrote snapshot: ${file}`);
-        };
-    });
+    // let file = `/tmp/github-crawler-${process.pid}-${Date.now()}.heapsnapshot`;
+    // heapdump.writeSnapshot(file, function(err){
+    //     if (err){
+    //         logger.log('error',err);
+    //     }else{
+    //         logger.log('info',`Wrote snapshot: ${file}`);
+    //     };
+    // });
     logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
 }
 
