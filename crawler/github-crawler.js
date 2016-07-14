@@ -5,7 +5,6 @@
 
 let https = require("https");
 let env = require('jsdom').env;
-let fs = require('fs');
 let _$ = require('jquery');
 let moment = require('moment');
 
@@ -16,19 +15,19 @@ let prevStr = 'nb_';
 let uniqueStr = `${process.pid}-${Date.now()}`;
 
 //日志
-let winston = require('winston');
-let logger = new (winston.Logger)({
-    transports: [
-        new (winston.transports.Console)(),
-        new (winston.transports.File)({ filename: `/tmp/github-crawler-${uniqueStr}.log` })
-    ]
-});
+// let winston = require('winston');
+// let logger = new (winston.Logger)({
+//     transports: [
+//         new (winston.transports.Console)(),
+//         new (winston.transports.File)({ filename: `/tmp/github-crawler-${uniqueStr}.log` })
+//     ]
+// });
 
 //监听垃圾回收
-let memwatch = require('memwatch-next');//not work
-memwatch.on('leak', function(info) {
-    logger.log('error',`memwatch leak: ${info}`);
-});
+// let memwatch = require('memwatch-next');//not work
+// memwatch.on('leak', function(info) {
+//     logger.log('error',`memwatch leak: ${info}`);
+// });
 let heapdump = require('heapdump');
 
 //数据库连接池
