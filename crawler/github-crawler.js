@@ -75,7 +75,7 @@ function crawler(){
                 let $ = _$(window);
                 let $items = $('div.file-wrap table.files tr.js-navigation-item');
                 if($items.length<=0){
-                    logger.log('error','github网站html结构发生变化');
+                    logger.log('error','github website html construct has changed.');
                 }
                 for(let i=0;i<$items.length;i++){
                     let $item = $items.eq(i);
@@ -155,7 +155,7 @@ function crawler(){
                                         for(let j=0;j<githubData.articles.length;j++){
                                             let item = githubData.articles[j];
                                             if(item.post_excerpt!=`${githubData.urls[j]}(${githubData.dates[j]})`){
-                                                logger.log('error','文章远程链接、文章内容以及文章远程更新时间对应关系混乱');
+                                                logger.log('error','the articles of link and content and update time can not match each other.');
                                             }
                                             let local;//本地数据
 
@@ -193,7 +193,7 @@ function crawler(){
                                                                                 finish(connection,j);
                                                                             });
                                                                         }else{
-                                                                            logger.log('error','新增文章之后没有insertId');
+                                                                            logger.log('error','the new article does not have insertId.');
                                                                             connection.release();
                                                                         }
                                                                     }
@@ -246,6 +246,11 @@ function crawler(){
             });
         });
     });
+    
+    req.on('error', function(e) {
+        logger.log('error',`https request ${url} error:${e}`);
+    });
+
     req.end();
 }
 
