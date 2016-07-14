@@ -31,13 +31,6 @@ memwatch.on('leak', function(info) {
 });
 let heapdump = require('heapdump');
 
-//定时任务
-let later = require('later');
-let sched = later.parse.recur()
-            .every(2).minute();//每2分钟执行一次
-            //.every(2).hour();//每2小时执行一次
-later.setInterval(crawler, sched);
-
 //数据库连接池
 let mysql = require('mysql');
 let pool = mysql.createPool({
@@ -321,6 +314,14 @@ function isHtml(url){
         return false;
     }
 }
+
+//定时任务
+// let later = require('later');
+// let sched = later.parse.recur()
+//             .every(2).minute();//每2分钟执行一次
+//             //.every(2).hour();//每2小时执行一次
+// later.setInterval(crawler, sched);
+setInterval(crawler,1000*60*2);
 
 //立即执行
 crawler();
