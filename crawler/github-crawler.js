@@ -134,7 +134,9 @@ function crawler(){
                                                         article.post_title = $article.children().eq(0).text();
                                                         $article.children().eq(0).remove();//移除标题
                                                         article.post_content = $article.html();
-                                                        article.post_content = article.post_content.replace(/\n      \n        \n        /g, '\n');
+                                                        if(typeof article.post_content == 'string'){
+                                                            article.post_content = article.post_content.replace(/\n      \n        \n        /g, '\n');
+                                                        }
                                                         article.post_name = encodeURIComponent(article.post_title);
                                                         article.post_modified = dateStr;
                                                         article.post_modified_gmt = dateGmtStr;
