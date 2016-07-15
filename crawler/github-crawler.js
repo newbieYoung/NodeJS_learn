@@ -57,6 +57,7 @@ function crawler(){
 
             res.setEncoding('utf-8');
             res.on('data',function(chunk){
+                logger.log('info',chunk+' debug');
                 data += chunk;
             });
             res.on('end',function(){
@@ -75,8 +76,8 @@ function crawler(){
                             let $a = $item.find('td.content span a');
                             let href = $a.attr('href');
                             let url =  `https://github.com${href}`;
-                            logger.log('debug',url);
-                            logger.log('debug',$item.find('td.age span').children().eq(0).attr('datetime'));
+                            logger.log('info',url+' debug');
+                            logger.log('info',$item.find('td.age span').children().eq(0).attr('datetime')+' debug');
                             if(isHtml(url)){
                                 githubData.urls.push(url);
                                 githubData.dates.push($item.find('td.age span').children().eq(0).attr('datetime'));
@@ -109,7 +110,7 @@ function crawler(){
                                             };
                                             let $ = _$(window);
                                             let $article = $('article.markdown-body');
-                                            logger.log('debug',$article.length);
+                                            logger.log('info',$article.length+' debug');
                                             let now = moment();
                                             let dateStr = now.format(timeFormatStr);
                                             let dateGmtStr = now.add(-8, 'hours').format(timeFormatStr);
