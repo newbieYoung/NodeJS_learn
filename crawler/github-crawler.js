@@ -74,7 +74,7 @@ function crawler(){
                         let $ = _$(window);
                         let $items = $('div.file-wrap table.files tr.js-navigation-item');
                         if($items.length<=0){
-                            logger.log('error','github website html construct has changed.');
+                            logger.log('error','github website html construct has changed');
                         }else{
                             for(let i=0;i<$items.length;i++){
                                 let $item = $items.eq(i);
@@ -159,7 +159,7 @@ function crawler(){
                                                             for(let j=0;j<githubData.articles.length;j++){
                                                                 let item = githubData.articles[j];
                                                                 if(item.post_excerpt!=`${githubData.urls[j]}(${githubData.dates[j]})`){
-                                                                    logger.log('error','the articles of link and content and update time can not match each other.');
+                                                                    logger.log('error','the articles of link and content and update time can not match each other');
                                                                 }else{
                                                                     let local;//本地数据
 
@@ -185,7 +185,7 @@ function crawler(){
                                                                                                 connection.release();
                                                                                             }else{
                                                                                                 if(result.insertId){
-                                                                                                    logger.log('info',item.post_excerpt+' inserted');
+                                                                                                    logger.log('info',`${item.post_excerpt} inserted`);
                                                                                                     item.guid = item.guid+result.insertId;
                                                                                                     item.ID = result.insertId;
                                                                                                     connection.query(`UPDATE ${prevStr}wp_posts SET guid = ? WHERE id = ?`,[item.guid,item.ID],function(err,result){//新增之后需要根据主键更新guid
@@ -197,7 +197,7 @@ function crawler(){
                                                                                                         finish(connection,j);
                                                                                                     });
                                                                                                 }else{
-                                                                                                    logger.log('error','the new article does not have insertId.');
+                                                                                                    logger.log('error','the new article does not have insertId');
                                                                                                     connection.release();
                                                                                                 }
                                                                                             }
@@ -255,7 +255,7 @@ function crawler(){
                                 },timeout);
 
                                 reqChild.on('error', function(e) {
-                                    logger.log('error',`https request ${githubData.urls[i]} error:${e}`);
+                                    logger.log('error',`https request ${githubData.urls[i]} error`);
                                 });
                                 
                                 reqChild.end();
@@ -276,12 +276,12 @@ function crawler(){
         },timeout);
         
         req.on('error', function(e) {
-            logger.log('error',`https request ${url} error:${e}`);
+            logger.log('error',`https request ${url} error`);
         });
 
         req.end();
     }catch(e){
-        logger.log('error',e);
+        logger.log('error','crawler function error');
     }
 }
 
