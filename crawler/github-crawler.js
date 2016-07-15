@@ -13,7 +13,7 @@ let url = 'https://github.com/newbieYoung/NewbieWebArticles';//远程地址
 let timeFormatStr = 'YYYY-MM-DD hh:mm:ss';
 let prevStr = 'nb_';
 let uniqueStr = `${process.pid}-${Date.now()}`;
-let timeout = 5000;//请求超时时间
+let timeout = 10000;//请求超时时间
 
 //日志
 let winston = require('winston');
