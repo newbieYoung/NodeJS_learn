@@ -351,8 +351,8 @@ function isHtml(url){
 //定时任务
 let later = require('later');
 let sched = later.parse.recur()
-            .every(2).minute();//每2分钟执行一次
-            //.every(2).hour();//每2小时执行一次
+            //.every(2).minute();//每2分钟执行一次
+            .every(2).hour();//每2小时执行一次
 later.setInterval(crawler, sched);
 
 //立即执行
