@@ -3,7 +3,7 @@
  */
 'use strict';
 
-let https = require("https");
+let request = require('request');
 let env = require('jsdom').env;
 let _$ = require('jquery');
 let moment = require('moment');
@@ -13,7 +13,6 @@ let url = 'https://github.com/newbieYoung/NewbieWebArticles';//远程地址
 let timeFormatStr = 'YYYY-MM-DD hh:mm:ss';
 let prevStr = 'nb_';
 let uniqueStr = `${process.pid}-${Date.now()}`;
-let timeout = 30000;//请求超时时间
 
 //日志
 let winston = require('winston');
@@ -52,20 +51,11 @@ function crawler(){
             urls:[],
             articles:[]
         }
-
-        let req = https.request(url,function(res){
-
-            let data = '';
-
-            res.setEncoding('utf-8');
-            res.on('data',function(chunk){
-                data += chunk;
-            });
-            res.on('end',function(){
-                //请求完成，如果此时没有超时则停止超时定时器
-                if(reqTimer){
-                    clearTimeout(reqTimer);
-                }
+        request(url, function (error, response, body) {
+            if(error){
+                logger.log('error',`request ${url} ${error}`);
+            }
+            if (!error && response.statusCode == 200) {
                 env(data,function(err,window){
                     if (err){
                         logger.log('error',err);
@@ -90,15 +80,11 @@ function crawler(){
                             for(let i=0;i<githubData.urls.length;i++){
                                 let data = '';
 
-                                let reqChild = https.request(githubData.urls[i],function(res){
-                                    res.setEncoding('utf-8');
-                                    res.on('data',function(chunk){
-                                        data += chunk;
-                                    });
-                                    res.on('end',function(){
-                                        if(reqChildTimer){
-                                            clearTimeout(reqChildTimer);
-                                        }
+                                request(githubData.urls[i], function (error, response, body) {
+                                    if(error){
+                                        logger.log('error',`request ${url} ${error}`);
+                                    }
+                                    if (!error && response.statusCode == 200) {
                                         env(data,function(err,window){
                                             if (err){
                                                 logger.log('error',err);
@@ -244,42 +230,16 @@ function crawler(){
                                             // free memory associated with the window
                                             window.close();
                                         })
-                                    });
+                                    }
                                 });
-
-                                //请求超时定时器
-                                let reqChildTimer = setTimeout(function(){
-                                    reqChild.abort();
-                                    reqChildTimer = null;
-                                    logger.log('error',`https request ${githubData.urls[i]} error:timeout ${timeout}`);
-                                },timeout);
-
-                                reqChild.on('error', function(e) {
-                                    logger.log('error',`https request ${githubData.urls[i]} error`);
-                                });
-                                
-                                reqChild.end();
                             }
                         }
                     }
                     // free memory associated with the window
                     window.close();
                 });
-            });
+            }
         });
-
-        //请求超时定时器
-        let reqTimer = setTimeout(function(){
-            req.abort();//中断请求
-            reqTimer = null;
-            logger.log('error',`https request ${url} error:timeout ${timeout}`);
-        },timeout);
-        
-        req.on('error', function(e) {
-            logger.log('error',`https request ${url} error`);
-        });
-
-        req.end();
     }catch(e){
         logger.log('error','crawler function error');
     }
@@ -300,16 +260,16 @@ function finish(connection,j){
     }else{
         connection.release();
     }
-    //生成内存快照
-    let file = `/tmp/github-crawler-${process.pid}-${Date.now()}.heapsnapshot`;
-    heapdump.writeSnapshot(file, function(err){
-        if (err){
-            logger.log('error',err);
-        }else{
-            logger.log('info',`Wrote snapshot: ${file}`);
-        };
-    });
-    logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
+    // //生成内存快照
+    // let file = `/tmp/github-crawler-${process.pid}-${Date.now()}.heapsnapshot`;
+    // heapdump.writeSnapshot(file, function(err){
+    //     if (err){
+    //         logger.log('error',err);
+    //     }else{
+    //         logger.log('info',`Wrote snapshot: ${file}`);
+    //     };
+    // });
+    // logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
 }
 
 //判断数组中是否存在空元素
