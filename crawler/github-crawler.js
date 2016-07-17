@@ -56,7 +56,7 @@ function crawler(){
                 logger.log('error',`request ${url} ${error}`);
             }
             if (!error && response.statusCode == 200) {
-                env(data,function(err,window){
+                env(body,function(err,window){
                     if (err){
                         logger.log('error',err);
                     }else{
@@ -85,7 +85,7 @@ function crawler(){
                                         logger.log('error',`request ${url} ${error}`);
                                     }
                                     if (!error && response.statusCode == 200) {
-                                        env(data,function(err,window){
+                                        env(body,function(err,window){
                                             if (err){
                                                 logger.log('error',err);
                                             }else{
