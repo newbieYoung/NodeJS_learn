@@ -7,6 +7,7 @@ let request = require('request');
 let env = require('jsdom').env;
 let _$ = require('jquery');
 let moment = require('moment');
+let timeout = 10000;
 
 //普通常量
 let url = 'https://github.com/newbieYoung/NewbieWebArticles';//远程地址
@@ -51,7 +52,7 @@ function crawler(){
             urls:[],
             articles:[]
         }
-        request(url, function (error, response, body) {
+        request.get(url,{timeout:timeout}, function (error, response, body) {
             if(error){
                 logger.log('error',`request ${url} ${error}`);
             }
@@ -80,7 +81,7 @@ function crawler(){
                             for(let i=0;i<githubData.urls.length;i++){
                                 let data = '';
 
-                                request(githubData.urls[i], function (error, response, body) {
+                                request.get(githubData.urls[i],{timeout:timeout}, function (error, response, body) {
                                     if(error){
                                         logger.log('error',`request ${url} ${error}`);
                                     }
@@ -311,8 +312,8 @@ function isHtml(url){
 //定时任务
 let later = require('later');
 let sched = later.parse.recur()
-            //.every(2).minute();//每2分钟执行一次
-            .every(2).hour();//每2小时执行一次
+            .every(2).minute();//每2分钟执行一次
+            //.every(2).hour();//每2小时执行一次
 later.setInterval(crawler, sched);
 
 //立即执行
