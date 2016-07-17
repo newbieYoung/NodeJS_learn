@@ -25,11 +25,11 @@ let logger = new (winston.Logger)({
 });
 
 //监听垃圾回收
-// let memwatch = require('memwatch-next');//not work
-// memwatch.on('leak', function(info) {
-//     logger.log('error',`memwatch leak: ${info}`);
-// });
-// let heapdump = require('heapdump');
+let memwatch = require('memwatch-next');//not work
+memwatch.on('leak', function(info) {
+    logger.log('error',`memwatch leak: ${info}`);
+});
+let heapdump = require('heapdump');
 
 //数据库连接池
 let mysql = require('mysql');
@@ -301,14 +301,14 @@ function finish(connection,j){
         connection.release();
     }
     //生成内存快照
-    // let file = `/tmp/github-crawler-${process.pid}-${Date.now()}.heapsnapshot`;
-    // heapdump.writeSnapshot(file, function(err){
-    //     if (err){
-    //         logger.log('error',err);
-    //     }else{
-    //         logger.log('info',`Wrote snapshot: ${file}`);
-    //     };
-    // });
+    let file = `/tmp/github-crawler-${process.pid}-${Date.now()}.heapsnapshot`;
+    heapdump.writeSnapshot(file, function(err){
+        if (err){
+            logger.log('error',err);
+        }else{
+            logger.log('info',`Wrote snapshot: ${file}`);
+        };
+    });
     logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
 }
 
