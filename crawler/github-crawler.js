@@ -270,7 +270,7 @@ function finish(connection,j){
     //         logger.log('info',`Wrote snapshot: ${file}`);
     //     };
     // });
-    // logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
+    logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
 }
 
 //判断数组中是否存在空元素
