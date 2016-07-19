@@ -41,6 +41,11 @@ let pool = mysql.createPool({
     database:'newbieweb'
 });
 
+//捕获所有未处理的异常
+process.on('uncaughtException', function(err) {
+    logger.log('error',`Error caught in uncaughtException event:${err}`);
+});
+
 //爬虫
 function crawler(){
     try{
