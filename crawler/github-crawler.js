@@ -145,9 +145,11 @@ function finish(connection,j){
                 logger.log('info','delete unpublished articles success');
             }
             connection.release();
+            logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
         });
     }else{
         connection.release();
+        logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
     }
     // //生成内存快照
     // let file = `/tmp/github-crawler-${process.pid}-${Date.now()}.heapsnapshot`;
@@ -159,7 +161,6 @@ function finish(connection,j){
     //         logger.log('info',`Wrote snapshot: ${file}`);
     //     };
     // });
-    logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
 }
 
 //爬虫
@@ -280,7 +281,6 @@ function crawler(){
                         result = yield promiseQuery(connection,`select * from ${prevStr}wp_posts where post_excerpt like ?`,[`${githubData.urls[j]}%`]);
                         let iterator = result[Symbol.iterator]();
                         let local = iterator.next().value;//查出来的结果应该有且只有一个，否则数据出现异常
-                        finish(connection,j);
 
                         //不存在该文章，新增
                         if(!local){
