@@ -130,7 +130,7 @@ function checkArticles(articles){
 //完成一次数据处理
 function finish(connection,j){
     //每次数据操作时清除掉未发布的文章
-    if(j==0){
+    if(j===0){
         connection.query(`delete from ${prevStr}wp_posts where post_status != ?`, ['publish'],function(error, result){
             if (error){
                 logger.log('info','delete unpublished articles error');
@@ -168,7 +168,7 @@ function crawler(){
         dates:[],
         urls:[],
         articles:[]
-    }
+    };
    
     co(function *() {
         let promiseArr = [];
