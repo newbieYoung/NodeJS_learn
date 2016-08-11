@@ -67,12 +67,6 @@ function promiseEnv(body){
     });
 }
 
-function defaultReject(){
-    return new Promise((resolve, reject) => {
-        reject('defaultReject');
-    });
-}
-
 function promisePoolConnection(){
     return new Promise((resolve,reject) => {
         pool.getConnection(function(error, connection) {
@@ -146,10 +140,12 @@ function finish(connection,j){
             }
             connection.release();
             logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
+            setTimeout(crawler,delayTimes);
         });
     }else{
         connection.release();
         logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
+        setTimeout(crawler,delayTimes);
     }
     // //生成内存快照
     // let file = `/tmp/github-crawler-${process.pid}-${Date.now()}.heapsnapshot`;
@@ -322,6 +318,7 @@ function crawler(){
         }
     }).catch(function(error){
         logger.log('error',error);
+        setTimeout(crawler,delayTimes);
     });
 }
 
