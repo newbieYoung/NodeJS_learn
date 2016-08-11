@@ -47,9 +47,9 @@ function promiseRequestGet(url,params){
     return new Promise((resolve, reject) => {
         request.get(url,params,function(error,response,body){
             if(error){
-                reject({'func':'reject','data':error});
+                reject(error);
             }else{
-                resolve({'func':'resolve','data':body});
+                resolve(body);
             }
         });
     });
@@ -59,9 +59,9 @@ function promiseEnv(body){
     return new Promise((resolve, reject) => {
         env(body,function(error,window){
             if(error){
-                reject({'func':'reject','data':error});
+                reject(error);
             }else{
-                resolve({'func':'resolve','data':window});
+                resolve(window);
             }
         });
     });
@@ -69,7 +69,7 @@ function promiseEnv(body){
 
 function defaultReject(){
     return new Promise((resolve, reject) => {
-        reject({'func':'reject','data':'defaultReject'});
+        reject('defaultReject');
     });
 }
 
@@ -77,21 +77,21 @@ function promisePoolConnection(){
     return new Promise((resolve,reject) => {
         pool.getConnection(function(error, connection) {
             if(error){
-                reject({'func':'reject','data':error});
+                reject(error);
             }else{
-                resolve({'func':'resolve','data':connection});
+                resolve(connection);
             }
         });
     });
 }
 
 function promiseQuery(connection,sql,params){
-    return new Pormise((resolve,reject) => {
+    return new Promise((resolve,reject) => {
         connection.query(sql,params, function(error, result) {
             if (error){
-                reject({'func':'reject','data':error});
+                reject(error);
             }else{
-                resolve({'func':'resolve','data':result});
+                resolve(result);
             }
         });
     });
@@ -162,15 +162,6 @@ function finish(connection,j){
     logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
 }
 
-//promise是否执行成功
-function isPromiseResolved(result){
-    if(result.func === 'resolve'){
-        return true;
-    }else{
-        return false;
-    }
-}
-
 //爬虫
 function crawler(){
 	logger.log('info','--------------------------------------');
@@ -186,211 +177,151 @@ function crawler(){
         let promiseArr = [];
         //爬取项目主页
         let result = yield promiseRequestGet(url,{timeout:timeout});
-        if(isPromiseResolved(result)){
-            //解析项目主页获得所有文章的URL
-            result = yield promiseEnv(result.data);
-            if(isPromiseResolved(result)){
-                let $ = _$(result.data);
-                let $items = $('div.file-wrap table.files tr.js-navigation-item');
-                if($items.length<=0){
-                    logger.log('error','github website html construct has changed');
-                }else{
-                    for(let i=0;i<$items.length;i++){
-                        let $item = $items.eq(i);
-                        let $a = $item.find('td.content span a');
-                        let href = $a.attr('href');
-                        let url =  `https://github.com${href}`;
-                        if(isHtml(url)){
-                            githubData.urls.push(url);
-                            githubData.dates.push($item.find('td.age span').children().eq(0).attr('datetime'));
-                        }
-                    }
-                    //爬取具体文章页面
-                    for(let i=0;i<githubData.urls.length;i++){
-                        promiseArr.push(promiseRequestGet(githubData.urls[i],{timeout:timeout}));
-                    }
-                    result = yield Promise.all(promiseArr);
-                    promiseArr = [];
-                    //解析具体文章页面
-                    for(let i=0;i<result.length;i++){
-                        if(isPromiseResolved(result[i])){
-                            promiseArr.push(promiseEnv(result[i].data));
-                        }else{
-                            promiseArr.push(defaultReject());
-                            logger.log('error',`request ${githubData.urls[i]} error`);
-                            logger.log('error',result.data);
-                        }
-                    }
-                    result = yield Promise.all(promiseArr);
-                    promiseArr = [];
-                    for(let i=0;i<result.length;i++){
-                        if(isPromiseResolved(result[i])){
-                            let content = '';
-                            let $ = _$(result[i].data);
-                            //由于通过插件把markdown转换成html之后Github显示时还会处理一次，所以这里需要解析文章本身的html代码
-                            let $content = $('div.file table.js-file-line-container');
-                            let $trs = $content.find('tr');
-                            for(let z=0;z<$trs.length;z++){
-                                content += $trs.eq(z).text();
-                            }
-                            promiseArr.push(promiseEnv(content));
-                            result[i].data.close();
-                        }else{
-                            promiseArr.push(defaultReject());
-                            logger.log('error',`analyze ${githubData.urls[i]} error`);
-                            logger.log('error',result.data);
-                        }
-                    }
-                    result = yield Promise.all(promiseArr);
-                    promiseArr = [];
-                    for(let i=0;i<result.length;i++){
-                        if(isPromiseResolved(result[i])){
-                            let $ = _$(result[i].data);
-                            let $article = $('article.markdown-body');
-                            let now = moment();
-                            let dateStr = now.format(timeFormatStr);
-                            let dateGmtStr = now.add(-8, 'hours').format(timeFormatStr);
-                            let article = {};
-                            //整理数据
-                            article.post_author = 1;
-                            article.post_date = dateStr;
-                            article.post_date_gmt = dateGmtStr;
-                            article.post_status = 'publish';
-                            article.comment_status = 'open';
-                            article.ping_status = 'open';
-                            article.menu_order = 0;
-                            article.post_type = 'post';
-                            article.post_title = $article.children().eq(0).text();
-                            $article.children().eq(0).remove();//移除标题
-                            article.post_content = $article.html();
-                            if(typeof article.post_content == 'string'){
-                                article.post_content = article.post_content.replace(/\n      \n        \n        /g, '\n');
-                            }
-                            article.post_name = encodeURIComponent(article.post_title);
-                            article.post_modified = dateStr;
-                            article.post_modified_gmt = dateGmtStr;
-                            article.post_content_filtered = article.post_title;
-                            article.post_parent = 0;
-                            article.guid = 'http://www.newbieweb.me/?p=';
-                            article.menu_order = 0;
-                            article.post_type = 'post';
-                            article.comment_count = 0;
-                            //不知道这两个字段本来的含义，但是这里用来保存远程url路径和远程更新时间，用来判断是新增还是更新
-                            article.post_excerpt = `${githubData.urls[i]}(${githubData.dates[i]})`;//该文章远程url路径(该文章远程更新时间)
-                            //部分字段不能为空
-                            article.pinged = '';
-                            //由于回调函数的执行不一定是按照先后顺序来的，所以这里不能使用push否则会导致文章次序混乱
-                            //githubData.articles.push(article);
-                            githubData.articles[i] = article;
-                            result[i].data.close();
-                        }else{
-                            logger.log('error',`analyze ${githubData.urls[i]} error`);
-                            logger.log('error',result.data);
-                        }
-                    }
-                    //所有文章已经爬取完毕并且校验完成，开始数据处理
-                    if(!isArrayHasNull(githubData.articles)&&checkArticles(githubData.articles)&&githubData.articles.length===githubData.urls.length){
-                        logger.log('info','articles ready');
-                        for(let j=0;j<githubData.articles.length;j++){
-                            let item = githubData.articles[j];
-                            if(item.post_excerpt!=`${githubData.urls[j]}(${githubData.dates[j]})`){
-                                logger.log('error','the articles of link and content and update time can not match each other');
+        //解析项目主页获得所有文章的URL
+        result = yield promiseEnv(result);
+
+        let $ = _$(result);
+        let $items = $('div.file-wrap table.files tr.js-navigation-item');
+        if($items.length<=0){
+            result.close();  
+            logger.log('error','github website html construct has changed');
+        }else{
+            for(let i=0;i<$items.length;i++){
+                let $item = $items.eq(i);
+                let $a = $item.find('td.content span a');
+                let href = $a.attr('href');
+                let url =  `https://github.com${href}`;
+                if(isHtml(url)){
+                    githubData.urls.push(url);
+                    githubData.dates.push($item.find('td.age span').children().eq(0).attr('datetime'));
+                }
+            }
+            //爬取具体文章页面
+            for(let i=0;i<githubData.urls.length;i++){
+                promiseArr.push(promiseRequestGet(githubData.urls[i],{timeout:timeout}));
+            }
+            result.close(); 
+
+            result = yield Promise.all(promiseArr);
+            promiseArr = [];
+            //解析具体文章页面
+            for(let i=0;i<result.length;i++){
+                promiseArr.push(promiseEnv(result[i]));
+            }
+            result = yield Promise.all(promiseArr);
+            promiseArr = [];
+            for(let i=0;i<result.length;i++){
+                let content = '';
+                let $ = _$(result[i]);
+                //由于通过插件把markdown转换成html之后Github显示时还会处理一次，所以这里需要解析文章本身的html代码
+                let $content = $('div.file table.js-file-line-container');
+                let $trs = $content.find('tr');
+                for(let z=0;z<$trs.length;z++){
+                    content += $trs.eq(z).text();
+                }
+                promiseArr.push(promiseEnv(content));
+                result[i].close();
+            }
+            result = yield Promise.all(promiseArr);
+            promiseArr = [];
+            for(let i=0;i<result.length;i++){
+                let $ = _$(result[i]);
+                let $article = $('article.markdown-body');
+                let now = moment();
+                let dateStr = now.format(timeFormatStr);
+                let dateGmtStr = now.add(-8, 'hours').format(timeFormatStr);
+                let article = {};
+                //整理数据
+                article.post_author = 1;
+                article.post_date = dateStr;
+                article.post_date_gmt = dateGmtStr;
+                article.post_status = 'publish';
+                article.comment_status = 'open';
+                article.ping_status = 'open';
+                article.menu_order = 0;
+                article.post_type = 'post';
+                article.post_title = $article.children().eq(0).text();
+                $article.children().eq(0).remove();//移除标题
+                article.post_content = $article.html();
+                if(typeof article.post_content == 'string'){
+                    article.post_content = article.post_content.replace(/\n      \n        \n        /g, '\n');
+                }
+                article.post_name = encodeURIComponent(article.post_title);
+                article.post_modified = dateStr;
+                article.post_modified_gmt = dateGmtStr;
+                article.post_content_filtered = article.post_title;
+                article.post_parent = 0;
+                article.guid = 'http://www.newbieweb.me/?p=';
+                article.menu_order = 0;
+                article.post_type = 'post';
+                article.comment_count = 0;
+                //不知道这两个字段本来的含义，但是这里用来保存远程url路径和远程更新时间，用来判断是新增还是更新
+                article.post_excerpt = `${githubData.urls[i]}(${githubData.dates[i]})`;//该文章远程url路径(该文章远程更新时间)
+                //部分字段不能为空
+                article.pinged = '';
+                //由于回调函数的执行不一定是按照先后顺序来的，所以这里不能使用push否则会导致文章次序混乱
+                //githubData.articles.push(article);
+                githubData.articles[i] = article;
+                result[i].close();
+            }
+            //所有文章已经爬取完毕并且校验完成，开始数据处理
+            if(!isArrayHasNull(githubData.articles)&&checkArticles(githubData.articles)&&githubData.articles.length===githubData.urls.length){
+                logger.log('info','articles ready');
+                for(let j=0;j<githubData.articles.length;j++){
+                    let item = githubData.articles[j];
+                    if(item.post_excerpt!=`${githubData.urls[j]}(${githubData.dates[j]})`){
+                        logger.log('error','the articles of link and content and update time can not match each other');
+                    }else{
+                        //数据库连接池的使用方式是先获取连接然后再使用，操作完成之后再释放否则会出现内存泄漏的情况
+                        result = yield promisePoolConnection();
+                        let connection = result;
+                        logger.log('info',`get connection at ${moment().format(timeFormatStr)}`);
+
+                        result = yield promiseQuery(connection,`select * from ${prevStr}wp_posts where post_excerpt like ?`,[`${githubData.urls[j]}%`]);
+                        let iterator = result[Symbol.iterator]();
+                        let local = iterator.next().value;//查出来的结果应该有且只有一个，否则数据出现异常
+                        finish(connection,j);
+
+                        //不存在该文章，新增
+                        if(!local){
+                            result = yield promiseQuery(connection,`INSERT INTO ${prevStr}wp_posts SET ?`,item);
+                            if(result.insertId){
+                                logger.log('info',`${item.post_excerpt} insert success`);
+                                item.guid = item.guid+result.insertId;
+                                item.ID = result.insertId;
+                                result = yield promiseQuery(connection,`UPDATE ${prevStr}wp_posts SET guid = ? WHERE id = ?`,[item.guid,item.ID]);
+                                logger.log('info',`${item.post_excerpt} guid update success`);
+                                finish(connection,j);
                             }else{
-                                let local;//本地数据
-                                let connection;
-                                //数据库连接池的使用方式是先获取连接然后再使用，操作完成之后再释放否则会出现内存泄漏的情况
-                                result = yield promisePoolConnection();
-                                if(isPromiseResolved(result)){
-                                    connection = result.data;
-                                    logger.log('info',`get connection at ${moment().format(timeFormatStr)}`);
-
-                                    connection.query(`select * from ${prevStr}wp_posts where post_excerpt like ?`,[`${githubData.urls[j]}%`], function(error, result) {
-                                        if (error){
-                                            console.log(error);
-                                        }else{
-                                            console.log('success');
-                                        }
-                                        connection.release();
-                                    });
-
-                                    // result = yield promiseQuery(connection,`select * from ${prevStr}wp_posts where post_excerpt like ?`,[`${githubData.urls[j]}%`]);
-                                    // if(isPromiseResolved(result)){
-                                    //     let iterator = result[Symbol.iterator]();
-                                    //     let local = iterator.next().value;//查出来的结果应该有且只有一个，否则数据出现异常
-                                    //     finish(connection,j);
-
-                                    //     //不存在该文章，新增
-                                    //     if(!local){
-                                    //         result = yield promiseQuery(connection,`INSERT INTO ${prevStr}wp_posts SET ?`,item);
-                                    //         if(isPromiseResolved(result)){
-                                    //             if(result.data.insertId){
-                                    //                 logger.log('info',`${item.post_excerpt} insert success`);
-                                    //                 item.guid = item.guid+result.data.insertId;
-                                    //                 item.ID = result.data.insertId;
-                                    //                 result = yield promiseQuery(connection,`UPDATE ${prevStr}wp_posts SET guid = ? WHERE id = ?`,[item.guid,item.ID]);
-                                    //                 if(isPromiseResolved(result)){
-                                    //                     logger.log('info',`${item.post_excerpt} guid update success`);
-                                    //                 }else{
-                                    //                     logger.log('error',`${item.post_excerpt} guid update error`);
-                                    //                     logger.log('error',result.data);
-                                    //                 }
-                                    //                 finish(connection,j);
-                                    //             }else{
-                                    //                 logger.log('error','the new article does not have insertId');
-                                    //                 finish(connection,j);
-                                    //             }
-                                    //         }else{
-                                    //             logger.log('error',`${item.post_excerpt} insert error`);
-                                    //             logger.log('error',result.data);
-                                    //         }
-                                    //     }else{
-                                    //         //本地文章是最新
-                                    //         if(local.post_excerpt === item.post_excerpt){
-                                    //             logger.log('info',`${item.post_excerpt} no change`);
-                                    //             finish(connection,j);
-                                    //         }else{
-                                    //             //重新设置需要更新的数据
-                                    //             result = yield promiseQuery(connection,`UPDATE ${prevStr}wp_posts SET post_title = ? ,
-                                    //                                                   post_content = ? ,
-                                    //                                                   post_name = ? ,
-                                    //                                                   post_modified = ? ,
-                                    //                                                   post_modified_gmt = ? ,
-                                    //                                                   post_content_filtered = ? ,
-                                    //                                                   post_excerpt = ?
-                                    //                                                   WHERE ID = ?`,[item.post_title,item.post_content,item.post_name,item.post_modified,
-                                    //             item.post_modified_gmt,item.post_content_filtered,item.post_excerpt,local.ID]);
-                                    //             if(isPromiseResolved(result)){
-                                    //                 logger.log('info',`${item.post_excerpt} update success`);
-                                    //             }else{
-                                    //                 logger.log('info',`${item.post_excerpt} update error`);
-                                    //                 logger.log('error',result.data);
-                                    //             }
-                                    //             finish(connection,j);
-                                    //         }
-                                    //     }
-                                    
-                                    // }else{
-                                    //     finish(connection,j);
-                                    //     logger.log('info',`${item.post_excerpt} update error`);
-                                    //     logger.log('error',result.data);
-                                    // }
-                                }else{
-                                    logger.log('error','select ${githubData.urls[j] error');
-                                    logger.log('error',result.data);
-                                }
+                                logger.log('error','the new article does not have insertId');
+                                finish(connection,j);
+                            }
+                        }else{
+                            //本地文章是最新
+                            if(local.post_excerpt === item.post_excerpt){
+                                logger.log('info',`${item.post_excerpt} no change`);
+                                finish(connection,j);
+                            }else{
+                                //重新设置需要更新的数据
+                                result = yield promiseQuery(connection,`UPDATE ${prevStr}wp_posts SET post_title = ? ,
+                                                                      post_content = ? ,
+                                                                      post_name = ? ,
+                                                                      post_modified = ? ,
+                                                                      post_modified_gmt = ? ,
+                                                                      post_content_filtered = ? ,
+                                                                      post_excerpt = ?
+                                                                      WHERE ID = ?`,[item.post_title,item.post_content,item.post_name,item.post_modified,
+                                item.post_modified_gmt,item.post_content_filtered,item.post_excerpt,local.ID]);
+                                logger.log('info',`${item.post_excerpt} update success`);
+                                finish(connection,j);
                             }
                         }
                     }
                 }
-                result.data.close();
-            }else{
-                logger.log('error',`analyze ${url} error`);
-                logger.log('error',result.data);
             }
-        }else{
-            logger.log('error',`request ${url} error`);
-            logger.log('error',result.data);
         }
+    }).catch(function(error){
+        logger.log('error',error);
     });
 }
 
