@@ -14,7 +14,7 @@ let url = 'https://github.com/newbieYoung/NewbieWebArticles';//远程地址
 let timeFormatStr = 'YYYY-MM-DD hh:mm:ss';
 let prevStr = 'nb_';
 let uniqueStr = `${process.pid}-${Date.now()}`;
-let delayTimes = 60*60*1000;//每个更新任务间隔1小时
+let delayTimes = 5*60*1000;//每个更新任务间隔1小时
 
 //日志
 let winston = require('winston');
@@ -180,8 +180,8 @@ function crawler(){
         let $ = _$(result);
         let $items = $('div.file-wrap table.files tr.js-navigation-item');
         if($items.length<=0){
-            result.close();  
-            logger.log('error','github website html construct has changed');
+            result.close();
+            throw new Error('github website html construct has changed');
         }else{
             for(let i=0;i<$items.length;i++){
                 let $item = $items.eq(i);
