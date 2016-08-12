@@ -159,14 +159,13 @@ function finish(connection,j){
 
 //再次爬取
 function crawlerAgain(){
-    logger.log('info','crawler will run again ${delayTimes} mseconds later');
+    logger.log('info',`crawler will run again ${delayTimes} mseconds later`);
     setTimeout(crawler,delayTimes);
 }
 
 //爬虫
 function crawler(){
 	logger.log('info','--------------------------------------');
-    logger.log('info',`strat ${moment().format(timeFormatStr)}`);
 
     let githubData = {
         dates:[],
@@ -177,6 +176,7 @@ function crawler(){
     co(function *() {
         let promiseArr = [];
         //爬取项目主页
+        logger.log('info',`strat ${moment().format(timeFormatStr)}`);
         let result = yield promiseRequestGet(url,{timeout:timeout});
         //解析项目主页获得所有文章的URL
         result = yield promiseEnv(result);
