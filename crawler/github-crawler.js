@@ -140,12 +140,10 @@ function finish(connection,j){
             }
             connection.release();
             logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
-            setTimeout(crawler,delayTimes);
         });
     }else{
         connection.release();
         logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
-        setTimeout(crawler,delayTimes);
     }
     // //生成内存快照
     // let file = `/tmp/github-crawler-${process.pid}-${Date.now()}.heapsnapshot`;
@@ -157,6 +155,12 @@ function finish(connection,j){
     //         logger.log('info',`Wrote snapshot: ${file}`);
     //     };
     // });
+}
+
+//再次爬取
+function crawlerAgain(){
+    logger.log('info','crawler will run again ${delayTimes} mseconds later');
+    setTimeout(crawler,delayTimes);
 }
 
 //爬虫
@@ -316,9 +320,11 @@ function crawler(){
                 }
             }
         }
+    }).then(function(){
+        crawlerAgain();
     }).catch(function(error){
         logger.log('error',error);
-        setTimeout(crawler,delayTimes);
+        crawlerAgain();
     });
 }
 
