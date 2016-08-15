@@ -180,9 +180,8 @@ function crawler(){
         let result = yield promiseRequestGet(url,{timeout:timeout});
         //解析项目主页获得所有文章的URL
         result = yield promiseEnv(result);
-
         let $ = _$(result);
-        let $items = $('div.file-wrap table.files tr.js-navigation-item');
+        let $items = $('.file-wrap table.files tr.js-navigation-item');
         if($items.length<=0){
             result.close();
             throw new Error('github website html construct has changed');
