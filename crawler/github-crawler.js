@@ -51,6 +51,8 @@ function promiseRequestGet(url,params){
             }else{
                 resolve(body);
             }
+        }).on('error',function(error){
+            reject(error);
         });
     });
 }
