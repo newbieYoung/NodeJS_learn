@@ -138,10 +138,12 @@ function finish(connection,j){
             }else{
                 logger.log('info','delete unpublished articles success');
             }
+            //logger.log('info',process.memoryUsage());//输出内存信息
             connection.release();
             logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
         });
     }else{
+        //logger.log('info',process.memoryUsage());//输出内存信息
         connection.release();
         logger.log('info',`connection release at ${moment().format(timeFormatStr)}`);
     }
