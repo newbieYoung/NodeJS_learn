@@ -186,7 +186,7 @@ function crawler(){
         let $items = $('.file-wrap table.files tr.js-navigation-item');
         if($items.length<=0){
             result.close();
-            throw new Error('github website html construct has changed');
+            logger.log('error','github website html construct has changed');
         }else{
             for(let i=0;i<$items.length;i++){
                 let $item = $items.eq(i);
