@@ -20,8 +20,8 @@ let delayTimes = 5*60*1000;//每个更新任务间隔1小时
 let winston = require('winston');
 let logger = new (winston.Logger)({
     transports: [
-        new (winston.transports.Console)(),
-        new (winston.transports.File)({ filename: `/tmp/github-crawler-${uniqueStr}.log` })
+        //new (winston.transports.File)({ filename: `/tmp/github-crawler-${uniqueStr}.log` }),
+        new (winston.transports.Console)()
     ]
 });
 
