@@ -255,7 +255,7 @@ function crawler(){
                 article.post_modified_gmt = dateGmtStr;
                 article.post_content_filtered = article.post_title;
                 article.post_parent = 0;
-                article.guid = 'http://www.newbieweb.me/?p=';
+                article.guid = 'http://newbieweb.lione.me/?p=';
                 article.menu_order = 0;
                 article.post_type = 'post';
                 article.comment_count = 0;
