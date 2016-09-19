@@ -8,6 +8,8 @@ let env = require('jsdom').env;
 let _$ = require('jquery');
 let moment = require('moment');
 let timeout = 10000;
+let fs = require('fs');
+let child_process = require('child_process');
 
 //普通常量
 let url = 'https://github.com/newbieYoung/NewbieWebArticles';//远程地址
@@ -319,6 +321,35 @@ function crawler(){
                         }
                     }
                 }
+                //更新全部文章的sitemap相关信息
+                let newConnection = yield promisePoolConnection();
+                let postArticles = yield promiseQuery(newConnection,`select guid,post_modified_gmt from ${prevStr}wp_posts where post_status = 'publish'`);//查询公开发布状态的所有文章
+                let innerContent = '';
+                for(let i=0;i<postArticles.length;i++){
+                    let item = postArticles[i];
+                    innerContent += `
+                    <url>
+                        <loc>${item.guid}</loc>
+                        <lastmod>${item.post_modified_gmt}</lastmod>
+                        <changefreq>weekly</changefreq>
+                        <priority>1.0</priority>
+                    </url>
+                    `;
+                }
+                let sitemapContent = `<?xml version="1.0" encoding="utf-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+    ${innerContent}
+</urlset>`;
+                fs.writeFileSync('sitemap.xml', sitemapContent);
+                logger.log('info','sitemap.xml updated');
+                //更新robot.txt
+                let robotContent = `User-agent: *
+Disallow:
+Sitemap: http://newbieweb.lione.me/sitemap.xml`;
+                fs.writeFileSync('robot.txt',robotContent);
+                logger.log('info','robot.txt updated');
+                child_process.execSync('scp ./sitemap.xml ./robot.txt root@120.24.166.108:/documents/newbieweb');
+                logger.log('info','sitemap.xml and robot.txt uploaded');
             }
         }
     }).then(function(){

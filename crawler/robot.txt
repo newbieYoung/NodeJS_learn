@@ -1,0 +1,3 @@
+User-agent: *
+Disallow:
+Sitemap: http://newbieweb.lione.me/sitemap.xml
