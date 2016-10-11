@@ -330,7 +330,7 @@ function crawler(){
                     innerContent += `
                     <url>
                         <loc>${item.guid}</loc>
-                        <lastmod>${item.post_modified_gmt}</lastmod>
+                        <lastmod>${moment(item.post_modified_gmt).format()}</lastmod>
                         <changefreq>weekly</changefreq>
                         <priority>1.0</priority>
                     </url>
