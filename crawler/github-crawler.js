@@ -255,7 +255,7 @@ function crawler(){
                 article.post_modified_gmt = dateGmtStr;
                 article.post_content_filtered = article.post_title;
                 article.post_parent = 0;
-                article.guid = 'http://newbieweb.lione.me/?p=';
+                article.guid = 'https://newbieweb.lione.me/?p=';
                 article.menu_order = 0;
                 article.post_type = 'post';
                 article.comment_count = 0;
@@ -345,7 +345,7 @@ function crawler(){
                 //更新robot.txt
                 let robotContent = `User-agent: *
 Disallow:
-Sitemap: http://newbieweb.lione.me/sitemap.xml`;
+Sitemap: https://newbieweb.lione.me/sitemap.xml`;
                 fs.writeFileSync('robot.txt',robotContent);
                 logger.log('info','robot.txt updated');
                 child_process.execSync('scp ./sitemap.xml ./robot.txt root@120.24.166.108:/documents/newbieweb');
