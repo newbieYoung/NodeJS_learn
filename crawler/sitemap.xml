@@ -87,7 +87,14 @@
                     
                     <url>
                         <loc>https://newbieweb.lione.me/?p=148</loc>
-                        <lastmod>2016-10-19T03:36:17+08:00</lastmod>
+                        <lastmod>2016-10-19T12:40:14+08:00</lastmod>
+                        <changefreq>weekly</changefreq>
+                        <priority>1.0</priority>
+                    </url>
+                    
+                    <url>
+                        <loc>https://newbieweb.lione.me/?p=150</loc>
+                        <lastmod>2016-10-19T12:40:14+08:00</lastmod>
                         <changefreq>weekly</changefreq>
                         <priority>1.0</priority>
                     </url>
