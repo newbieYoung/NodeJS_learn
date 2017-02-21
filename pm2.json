@@ -1,9 +1,17 @@
 {
+  // "apps" : [{
+  //   "name"        : "github-crawler",
+  //   "script"      : "./crawler/github-crawler.js",
+  //   "watch"       : true,
+  //   "exec_interpreter" : "babel-node",
+  //   "exec_mode"        : "fork",
+  // }]
+   
   "apps" : [{
-    "name"        : "github-crawler",
-    "script"      : "./crawler/github-crawler.js",
+    "name"        : "harp-server",
+    "script"      : "./harp/demo0.js",
     "watch"       : true,
-    "exec_interpreter" : "babel-node",
+    "exec_interpreter" : "node",
     "exec_mode"        : "fork",
   }]
 }
