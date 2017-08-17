@@ -198,6 +198,8 @@ function crawler(){
                 if(isHtml(url)){
                     githubData.urls.push(url);
                     githubData.dates.push($item.find('td.age span').children().eq(0).attr('datetime'));
+                    console.log('-- '+url+' --');
+                    console.log($item.find('td.age span').children().eq(0).attr('datetime'));
                 }
             }
             //爬取具体文章页面
