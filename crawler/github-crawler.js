@@ -32,8 +32,8 @@ let mysql = require('mysql');
 let pool = mysql.createPool({
     connectionLimit : 1,
     host            : 'rm-wz94279gwn3ygk50ho.mysql.rds.aliyuncs.com',
-    user            : 'young',
-    password        : 'newbie79923327',
+    user            : '*****',
+    password        : '**************',
     database:'newbieweb'
 });
 
