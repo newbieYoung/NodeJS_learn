@@ -10,9 +10,7 @@ function dirSync(dir,callback){
 		let pathName = path.join(dir,file);
 		//如果当前文件是目录则继续遍历
 		if(fs.statSync(pathName).isDirectory()){
-			setTimeout(function(){
-				dirSync(pathName,callback);
-			},0);
+			dirSync(pathName,callback);
 		}else{
 			callback(pathName);
 		}
