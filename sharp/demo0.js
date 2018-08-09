@@ -29,8 +29,7 @@ Sharp(inputPath)//输入图片路径
                 channels: 4,
                 background: { r: 255, g: 255, b: 255 , alpha: 0 }
             }
-        })
-            .png();
+        }).png();
 
         emptyImage.overlayWith(inputPath, { gravity: Sharp.gravity.southeast } )
             //.toBuffer()//输出buffer形式
