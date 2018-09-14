@@ -1,10 +1,14 @@
+/**
+ * 奇数尺寸图片，增加1px透明区域变为偶数尺寸
+ */
+
 'use strict';
 let path = require('path');
 let fs = require('fs');
 let Sharp = require('sharp');
 
-let inputDir = '/Users/newyoung/NodeJS_learn/sharp/input';
-let outPutDir = '/Users/newyoung/NodeJS_learn/sharp/output';
+let inputDir = '/Users/newyoung/qz-act/2018/vip-sales-system/img/slice/rem';
+let outPutDir = '/Users/newyoung/qz-act/2018/vip-sales-system/img/slice/rem/output';
 
 function dirSync(dir,callback){//遍历目录
     fs.readdirSync(dir).forEach(function(file){
@@ -13,9 +17,20 @@ function dirSync(dir,callback){//遍历目录
         if(fs.statSync(pathName).isDirectory()){
             dirSync(pathName,callback);
         }else{
-            callback(pathName,file);
+            if(isImage(file)){
+                callback(pathName,file);
+            }
         }
     });
+}
+
+function isImage(fileName){
+    var extname = path.extname(fileName).toLowerCase();
+    if(extname=='.png'||extname=='.jpg'||extname=='.jpeg'){
+        return true;
+    }else{
+        return false;
+    }
 }
 
 function oddToEven(pathName,fileName){//处理图片
