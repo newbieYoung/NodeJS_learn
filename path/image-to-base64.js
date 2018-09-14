@@ -39,7 +39,6 @@ function imageToBase64(pathName,fileName){
     var code = '.'+name+'{\n';
         code += 'background-image:url('+data+')\n';
         code += '}\n';
-    console.log(code);
     fs.appendFile(outPutDir+'/image.css', code, function (err) {
         if (err) throw err;
         console.log(fileName + ' success');
