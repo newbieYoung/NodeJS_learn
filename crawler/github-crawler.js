@@ -220,7 +220,7 @@ function crawler(){
                 let content = '';
                 let $ = _$(result[i]);
                 //由于通过插件把markdown转换成html之后Github显示时还会处理一次，所以这里需要解析文章本身的html代码
-                let $content = $('div.file table.js-file-line-container');
+                let $content = $('table.js-file-line-container');
                 let $trs = $content.find('tr');
                 for(let z=0;z<$trs.length;z++){
                     content += $trs.eq(z).text();
