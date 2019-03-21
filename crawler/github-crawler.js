@@ -4,8 +4,7 @@
 'use strict';
 
 let request = require('request');
-let jsdom = require('jsdom');
-let { JSDOM } = jsdom;
+let env = require('jsdom').env;
 let _$ = require('jquery');
 let moment = require('moment');
 let timeout = 10000;
@@ -33,8 +32,8 @@ let mysql = require('mysql');
 let pool = mysql.createPool({
     connectionLimit : 1,
     host            : 'rm-wz94279gwn3ygk50ho.mysql.rds.aliyuncs.com',
-    user            : '',
-    password        : '',
+    user            : '*****',
+    password        : '**************',
     database:'newbieweb'
 });
 
@@ -59,7 +58,15 @@ function promiseRequestGet(url,params){
 }
 
 function promiseEnv(body){
-    return new JSDOM(body).window;
+    return new Promise((resolve, reject) => {
+        env(body,function(error,window){
+            if(error){
+                reject(error);
+            }else{
+                resolve(window);
+            }
+        });
+    });
 }
 
 function promisePoolConnection(){
@@ -171,63 +178,61 @@ function crawler(){
     };
    
     co(function *() {
-
-        //NewbieWebArticles项目主页
+        let promiseArr = [];
+        //爬取项目主页
         logger.log('info',`strat ${moment().format(timeFormatStr)}`);
-        let body = yield promiseRequestGet(url,{timeout:timeout});
-        let env = promiseEnv(body);
-        let $ = _$(env);
+        let result = yield promiseRequestGet(url,{timeout:timeout});
+        //解析项目主页获得所有文章的URL
+        result = yield promiseEnv(result);
+        let $ = _$(result);
         let $items = $('.file-wrap table.files tr.js-navigation-item');
         if($items.length<=0){
+            result.close();
             logger.log('error','github website html construct has changed');
         }else{
-            let nowYear = new Date().getFullYear();
             for(let i=0;i<$items.length;i++){
                 let $item = $items.eq(i);
                 let $a = $item.find('td.content span a');
                 let href = $a.attr('href');
                 let url =  `https://github.com${href}`;
                 if(isHtml(url)){
-                    let $datetime = $item.find('td.age span').children().eq(0);
-                    let datetime = $datetime.attr('datetime');
-                    if(datetime){
-                        let year = datetime.substring(0,4);
-                        //if(year==nowYear){//文章多了之后，可以只考虑一年以内的
-                            console.log('-- '+url+' --');
-                            console.log(datetime);
-                            githubData.dates.push(datetime);
-                            githubData.urls.push(url);
-                        //}
-                    }
+                    githubData.urls.push(url);
+                    let datetime = $item.find('td.age span').children().eq(0).attr('datetime');
+                    githubData.dates.push(datetime);
+                    console.log('-- '+url+' --');
+                    console.log(datetime);
                 }
             }
-
-            //文章列表页
-            let pages = [];
+            //爬取具体文章页面
             for(let i=0;i<githubData.urls.length;i++){
-                pages.push(promiseRequestGet(githubData.urls[i],{timeout:timeout}));
+                promiseArr.push(promiseRequestGet(githubData.urls[i],{timeout:timeout}));
             }
-            let bodys = yield Promise.all(pages);
-            let envs = [];
-            for(let i=0;i<bodys.length;i++){
-                envs.push(promiseEnv(bodys[i]));
-            }
+            result.close(); 
 
-            //文章内容
-            let contents = [];
-            for(let i=0;i<envs.length;i++){
+            result = yield Promise.all(promiseArr);
+            promiseArr = [];
+            //解析具体文章页面
+            for(let i=0;i<result.length;i++){
+                promiseArr.push(promiseEnv(result[i]));
+            }
+            result = yield Promise.all(promiseArr);
+            promiseArr = [];
+            for(let i=0;i<result.length;i++){
                 let content = '';
-                let $ = _$(envs[i]);
+                let $ = _$(result[i]);
                 //由于通过插件把markdown转换成html之后Github显示时还会处理一次，所以这里需要解析文章本身的html代码
-                let $content = $('table.js-file-line-container');
+                let $content = $('div.file table.js-file-line-container');
                 let $trs = $content.find('tr');
                 for(let z=0;z<$trs.length;z++){
                     content += $trs.eq(z).text();
                 }
-                contents.push(promiseEnv(content));
+                promiseArr.push(promiseEnv(content));
+                result[i].close();
             }
-            for(let i=0;i<contents.length;i++){
-                let $ = _$(contents[i]);
+            result = yield Promise.all(promiseArr);
+            promiseArr = [];
+            for(let i=0;i<result.length;i++){
+                let $ = _$(result[i]);
                 let $article = $('article.markdown-body');
                 let now = moment();
                 let dateStr = now.format(timeFormatStr);
@@ -264,6 +269,7 @@ function crawler(){
                 //由于回调函数的执行不一定是按照先后顺序来的，所以这里不能使用push否则会导致文章次序混乱
                 //githubData.articles.push(article);
                 githubData.articles[i] = article;
+                result[i].close();
             }
             //所有文章已经爬取完毕并且校验完成，开始数据处理
             if(!isArrayHasNull(githubData.articles)&&checkArticles(githubData.articles)&&githubData.articles.length===githubData.urls.length){
@@ -274,10 +280,11 @@ function crawler(){
                         logger.log('error','the articles of link and content and update time can not match each other');
                     }else{
                         //数据库连接池的使用方式是先获取连接然后再使用，操作完成之后再释放否则会出现内存泄漏的情况
-                        let connection = yield promisePoolConnection();
+                        result = yield promisePoolConnection();
+                        let connection = result;
                         logger.log('info',`get connection at ${moment().format(timeFormatStr)}`);
 
-                        let result = yield promiseQuery(connection,`select * from ${prevStr}wp_posts where post_excerpt like ?`,[`${githubData.urls[j]}%`]);
+                        result = yield promiseQuery(connection,`select * from ${prevStr}wp_posts where post_excerpt like ?`,[`${githubData.urls[j]}%`]);
                         let iterator = result[Symbol.iterator]();
                         let local = iterator.next().value;//查出来的结果应该有且只有一个，否则数据出现异常
 
