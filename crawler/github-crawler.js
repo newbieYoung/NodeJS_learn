@@ -192,12 +192,12 @@ function crawler(){
                     let datetime = $datetime.attr('datetime');
                     if(datetime){
                         let year = datetime.substring(0,4);
-                        //if(year==nowYear){//文章多了之后，可以只考虑一年以内的
+                        if(year==nowYear){//文章多了之后，可以只考虑一年以内的
                             console.log('-- '+url+' --');
                             console.log(datetime);
                             githubData.dates.push(datetime);
                             githubData.urls.push(url);
-                        //}
+                        }
                     }
                 }
             }
