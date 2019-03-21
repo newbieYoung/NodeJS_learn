@@ -197,10 +197,9 @@ function crawler(){
                 let url =  `https://github.com${href}`;
                 if(isHtml(url)){
                     githubData.urls.push(url);
-                    let datetime = $item.find('td.age span').children().eq(0).attr('datetime');
-                    githubData.dates.push(datetime);
+                    githubData.dates.push($item.find('td.age span').children().eq(0).attr('datetime'));
                     console.log('-- '+url+' --');
-                    console.log(datetime);
+                    console.log($item.find('td.age span').children().eq(0).attr('datetime'));
                 }
             }
             //爬取具体文章页面
