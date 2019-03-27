@@ -43,21 +43,18 @@ function oddToEven(pathName,fileName){//处理图片
                 height:info.height
             };
 
-            //判断尺寸
-            size.width = size.width%2==0?size.width:size.width+1;
-            size.height = size.height%2==0?size.height:size.height+1;
+            if(fileName.indexOf('@2x')==-1){
+                //用于rem单位背景，额外新增2px间隙
+                size.width += 4;
+                size.height += 4;
 
-            if(size.width==info.width&&size.height==info.height){
-                //宽高均为偶数，不作处理
-            }else{
-                if(fileName.indexOf('@2x')==-1){//用于rem单位背景，额外新增2px间隙
-                    size.width += 4;
-                    size.height += 4;
+                var extname = path.extname(fileName);
+                var no = fileName.lastIndexOf(extname);
+                fileName = fileName.substring(0,no)+'@2x'+extname;
 
-                    var extname = path.extname(fileName);
-                    var no = fileName.lastIndexOf(extname);
-                    fileName = fileName.substring(0,no)+'@2x'+extname;
-                }
+                //处理奇数尺寸
+                size.width = size.width%2==0?size.width:size.width+1;
+                size.height = size.height%2==0?size.height:size.height+1;
 
                 //生成偶数透明背景
                 var emptyImage = Sharp({
@@ -78,6 +75,8 @@ function oddToEven(pathName,fileName){//处理图片
                         }
                     });
             }
+
+            
         })
         .catch(err => {
             if(err){
